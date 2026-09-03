@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page Factory — brief in, landing page out</title>
+<meta name="description" content="A static, bring-your-own-key tool that turns a few lines of brief into a complete single-file landing page. Works with llama.cpp, OpenAI-compatible endpoints, and Anthropic.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --ink:      #0B1620;
+  --ink-1:    #10202D;
+  --ink-2:    #182F41;
+  --line:     #23415A;
+  --line-dim: #16293A;
+
+  --paper:    #E9E7E0;
+  --paper-2:  #B9C4CE;
+  --mute:     #7E93A6;
+
+  --signal:   #C7F03C;
+  --cyan:     #5CC8E8;
+  --alert:    #FF6B4A;
+
+  --display: "Bricolage Grotesque", ui-sans-serif, sans-serif;
+  --sans:    "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --mono:    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --u: 8px;
+  --rail: 420px;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--paper);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    linear-gradient(var(--line-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-dim) 1px, transparent 1px);
+  background-size:48px 48px;
+  background-position:-1px -1px;
+}
+:focus-visible{ outline:2px solid var(--signal); outline-offset:2px; }
+button{ font:inherit; color:inherit; }
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.masthead{
+  display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+  padding:14px 20px;
+  border-bottom:1px solid var(--line);
+  background:color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter:blur(6px);
+  position:sticky; top:0; z-index:40;
+}
+.wordmark{
+  font-family:var(--display); font-weight:800; font-size:20px;
+  letter-spacing:-0.03em; margin:0;
+}
+.wordmark span{ color:var(--signal); }
+.tagline{ color:var(--mute); font-size:12.5px; }
+.masthead .spacer{ flex:1 1 auto; }
+.masthead a{ color:var(--cyan); font-size:12px; text-decoration:none; border-bottom:1px solid transparent; }
+.masthead a:hover{ border-bottom-color:var(--cyan); }
+
+.shell{
+  display:grid;
+  grid-template-columns:var(--rail) minmax(0,1fr);
+  gap:0;
+  align-items:start;
+  min-height:calc(100dvh - 53px);
+}
+.rail{
+  border-right:1px solid var(--line);
+  background:color-mix(in srgb, var(--ink) 92%, black);
+  padding:0 0 120px;
+  max-height:calc(100dvh - 53px);
+  overflow-y:auto;
+}
+.stage{ padding:0; min-width:0; display:flex; flex-direction:column; max-height:calc(100dvh - 53px); }
+
+/* ============================================================
+   PANELS — drawing-sheet labels sitting in the rule
+   ============================================================ */
+.panel{ border-bottom:1px solid var(--line); }
+.panel > summary, .panel-head{
+  display:flex; align-items:center; gap:10px;
+  padding:11px 16px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.14em;
+  color:var(--mute);
+  cursor:pointer; user-select:none;
+  list-style:none;
+}
+.panel > summary::-webkit-details-marker{ display:none; }
+.panel > summary::before{
+  content:"+"; width:14px; color:var(--signal); font-size:13px;
+}
+.panel[open] > summary::before{ content:"–"; }
+.panel > summary:hover{ color:var(--paper); }
+.panel-body{ padding:4px 16px 20px; }
+
+/* ============================================================
+   FORM
+   ============================================================ */
+label{ display:block; font-size:11.5px; color:var(--paper-2); margin:12px 0 5px; }
+label .hint{ color:var(--mute); }
+input[type=text], input[type=password], input[type=number], select, textarea{
+  width:100%; padding:8px 10px;
+  background:var(--ink-1);
+  border:1px solid var(--line);
+  border-radius:0;
+  color:var(--paper);
+  font-family:var(--sans); font-size:13px;
+}
+textarea{ resize:vertical; min-height:60px; line-height:1.45; }
+input:hover, select:hover, textarea:hover{ border-color:var(--ink-2); }
+input:focus, select:focus, textarea:focus{ border-color:var(--signal); outline:none; }
+::placeholder{ color:#54687A; }
+select{ appearance:none; background-image:linear-gradient(45deg,transparent 50%,var(--mute) 50%),linear-gradient(135deg,var(--mute) 50%,transparent 50%); background-position:calc(100% - 15px) 50%, calc(100% - 10px) 50%; background-size:5px 5px; background-repeat:no-repeat; padding-right:30px; }
+.row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.check{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:12px; color:var(--paper-2); }
+.check input{ width:auto; accent-color:var(--signal); }
+
+.mode-switch{ display:flex; border:1px solid var(--line); margin-bottom:4px; }
+.mode-switch button{
+  flex:1; padding:8px; background:transparent; border:0; cursor:pointer;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--mute);
+}
+.mode-switch button[aria-pressed=true]{ background:var(--signal); color:var(--ink); font-weight:600; }
+
+.inline-btn{
+  background:transparent; border:1px solid var(--line); color:var(--paper-2);
+  padding:7px 11px; cursor:pointer; font-size:12px; white-space:nowrap;
+}
+.inline-btn:hover:not(:disabled){ border-color:var(--cyan); color:var(--cyan); }
+.inline-btn:disabled{ opacity:.4; cursor:not-allowed; }
+.url-row{ display:grid; grid-template-columns:1fr auto; gap:8px; }
+
+/* ============================================================
+   RUN BAR
+   ============================================================ */
+.runbar{
+  position:sticky; bottom:0; z-index:20;
+  padding:12px 16px;
+  background:var(--ink);
+  border-top:1px solid var(--line);
+  display:grid; gap:8px;
+}
+.btn{
+  width:100%; padding:12px 14px; cursor:pointer;
+  border:1px solid var(--signal); background:var(--signal); color:var(--ink);
+  font-family:var(--display); font-weight:700; font-size:14px; letter-spacing:-0.01em;
+}
+.btn:hover:not(:disabled){ background:transparent; color:var(--signal); }
+.btn.ghost{ background:transparent; color:var(--paper-2); border-color:var(--line); font-weight:500; font-family:var(--sans); font-size:13px; padding:9px; }
+.btn.ghost:hover:not(:disabled){ border-color:var(--paper-2); color:var(--paper); }
+.btn:disabled{ opacity:.35; cursor:not-allowed; }
+.btn-pair{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+/* ============================================================
+   OUTPUT
+   ============================================================ */
+.tabs{
+  display:flex; align-items:center; gap:0;
+  border-bottom:1px solid var(--line);
+  padding:0 12px 0 0;
+  flex:0 0 auto;
+}
+.tab{
+  padding:13px 16px; background:transparent; border:0; border-bottom:2px solid transparent;
+  cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; color:var(--mute);
+}
+.tab[aria-selected=true]{ color:var(--paper); border-bottom-color:var(--signal); }
+.tab:hover{ color:var(--paper); }
+.tabs .spacer{ flex:1; }
+
+.toolbar{ display:flex; gap:4px; }
+.icon-btn{
+  width:32px; height:32px; display:grid; place-items:center;
+  background:transparent; border:1px solid transparent; cursor:pointer; color:var(--mute);
+}
+.icon-btn:hover:not(:disabled){ color:var(--signal); border-color:var(--line); }
+.icon-btn:disabled{ opacity:.3; cursor:not-allowed; }
+.icon-btn svg{ width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+.readout{
+  display:flex; gap:16px; align-items:center; flex-wrap:wrap;
+  padding:7px 16px; border-bottom:1px solid var(--line-dim);
+  font-family:var(--mono); font-size:10.5px; color:var(--mute); letter-spacing:.06em;
+  flex:0 0 auto;
+}
+.readout b{ color:var(--paper-2); font-weight:500; }
+.dot{ width:6px; height:6px; border-radius:50%; background:var(--mute); }
+.dot.live{ background:var(--signal); animation:pulse 1.1s ease-in-out infinite; }
+.dot.err{ background:var(--alert); }
+@keyframes pulse{ 50%{ opacity:.25; } }
+
+.viewport{ flex:1 1 auto; overflow:auto; min-height:0; position:relative; }
+.pane{ display:none; height:100%; }
+.pane.on{ display:block; }
+
+pre.code{
+  margin:0; padding:20px;
+  font-family:var(--mono); font-size:12.5px; line-height:1.65;
+  white-space:pre-wrap; word-break:break-word;
+  color:#D6E4EE; min-height:100%;
+}
+pre.code.brief{ white-space:pre-wrap; color:#DFE7EC; font-family:var(--sans); font-size:14px; line-height:1.62; max-width:78ch; }
+pre.code.brief strong{ color:var(--signal); }
+
+textarea.editable{
+  width:100%; height:100%; min-height:400px; border:0; padding:20px;
+  background:transparent; font-family:var(--sans); font-size:14px; line-height:1.62; resize:none;
+}
+textarea.editable:focus{ outline:none; }
+
+iframe.preview{ width:100%; height:100%; border:0; background:#fff; display:block; }
+
+.empty{
+  padding:64px 32px; max-width:60ch; color:var(--mute);
+}
+.empty h2{ font-family:var(--display); font-size:clamp(28px,4vw,44px); font-weight:800; letter-spacing:-0.035em; color:var(--paper); margin:0 0 14px; line-height:1.05; }
+.empty p{ margin:0 0 12px; }
+.empty ol{ padding-left:18px; margin:18px 0 0; }
+.empty li{ margin-bottom:8px; }
+.empty code{ font-family:var(--mono); font-size:12px; background:var(--ink-2); padding:1px 5px; color:var(--cyan); }
+
+.notice{
+  margin:16px; padding:12px 14px;
+  border-left:3px solid var(--alert); background:color-mix(in srgb, var(--alert) 9%, transparent);
+  font-size:13px; color:var(--paper);
+}
+.notice b{ color:var(--alert); }
+.notice code{ font-family:var(--mono); font-size:11.5px; }
+
+.toast{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  background:var(--signal); color:var(--ink); padding:9px 18px;
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  opacity:0; pointer-events:none; transition:opacity .18s;
+  z-index:100;
+}
+.toast.on{ opacity:1; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:900px){
+  .shell{ grid-template-columns:1fr; }
+  .rail{ max-height:none; border-right:0; border-bottom:1px solid var(--line); padding-bottom:0; }
+  .stage{ max-height:none; min-height:70dvh; }
+  .runbar{ position:sticky; bottom:0; }
+  body{ background-size:32px 32px; }
+}
+@media (max-width:420px){
+  .row{ grid-template-columns:1fr; }
+  .tab{ padding:12px 10px; }
+}
+@media (prefers-reduced-motion:reduce){
+  *{ animation:none !important; transition:none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <h1 class="wordmark">PAGE<span>·</span>FACTORY</h1>
+  <span class="tagline">brief in → single-file landing page out</span>
+  <span class="spacer"></span>
+  <a href="#how" id="howlink">how it works</a>
+</header>
+
+<div class="shell">
+
+<!-- ==================== RAIL ==================== -->
+<div class="rail">
+
+  <details class="panel" open>
+    <summary>01 · MODEL</summary>
+    <div class="panel-body">
+      <label for="provider">API format</label>
+      <select id="provider">
+        <option value="openai">OpenAI-compatible (llama.cpp, LM Studio, Ollama, vLLM, OpenAI, OpenRouter, Groq…)</option>
+        <option value="anthropic">Anthropic Messages</option>
+      </select>
+
+      <label for="baseUrl">Base URL <span class="hint">— include /v1</span></label>
+      <input type="text" id="baseUrl" placeholder="http://localhost:8080/v1" spellcheck="false">
+
+      <label for="apiKey">API key <span class="hint">— leave blank for local servers</span></label>
+      <input type="password" id="apiKey" placeholder="sk-…" spellcheck="false" autocomplete="off">
+
+      <label for="model">Model</label>
+      <div class="url-row">
+        <input type="text" id="model" placeholder="model name" spellcheck="false" list="modelList">
+        <button class="inline-btn" id="fetchModels">Fetch</button>
+      </div>
+      <datalist id="modelList"></datalist>
+
+      <div class="row">
+        <div>
+          <label for="temp">Temperature</label>
+          <input type="number" id="temp" value="0.9" min="0" max="2" step="0.1">
+        </div>
+        <div>
+          <label for="maxTokens">Max tokens</label>
+          <input type="number" id="maxTokens" value="16000" min="1000" step="1000">
+        </div>
+      </div>
+
+      <label class="check"><input type="checkbox" id="rememberKey"> Remember key in this browser</label>
+    </div>
+  </details>
+
+  <details class="panel" open>
+    <summary>02 · BRIEF</summary>
+    <div class="panel-body">
+      <div class="mode-switch" role="group" aria-label="Brief detail level">
+        <button id="modeQuick" aria-pressed="true">QUICK</button>
+        <button id="modeFull" aria-pressed="false">DETAILED</button>
+      </div>
+
+      <div id="quickPane">
+        <label for="quickText">Describe it in a few lines</label>
+        <textarea id="quickText" rows="6" placeholder="Landing page for my AI video work — a reel of generated shots, mostly directors and ad agencies looking for someone who can actually deliver. Want them to book a call."></textarea>
+        <p style="font-size:11.5px;color:var(--mute);margin:8px 0 0">Anything you leave out gets invented and tagged <b style="color:var(--paper-2)">[ASSUMED]</b> in the brief so you can correct it.</p>
+      </div>
+
+      <div id="fullPane" hidden>
+        <label for="f_client">Client / owner</label>
+        <input type="text" id="f_client" placeholder="c1t1zen">
+        <label for="f_what">What they do <span class="hint">— one sentence</span></label>
+        <textarea id="f_what" rows="2"></textarea>
+        <label for="f_job">The page's job</label>
+        <input type="text" id="f_job" placeholder="book a discovery call">
+        <label for="f_audience">Audience <span class="hint">— and what they're skeptical about</span></label>
+        <textarea id="f_audience" rows="2"></textarea>
+        <label for="f_proof">Proof assets</label>
+        <textarea id="f_proof" rows="2" placeholder="reel, credits, named clients, case studies, code"></textarea>
+        <div class="row">
+          <div><label for="f_cta1">Primary CTA</label><input type="text" id="f_cta1"></div>
+          <div><label for="f_cta2">Secondary CTA</label><input type="text" id="f_cta2"></div>
+        </div>
+        <label for="f_include">Must include</label>
+        <textarea id="f_include" rows="2"></textarea>
+        <label for="f_avoid">Must avoid</label>
+        <textarea id="f_avoid" rows="2"></textarea>
+        <div class="row">
+          <div><label for="f_tone">Tone <span class="hint">— 3 words</span></label><input type="text" id="f_tone"></div>
+          <div><label for="f_constraints">Constraints</label><input type="text" id="f_constraints"></div>
+        </div>
+      </div>
+
+      <label for="refUrl">Reference URL <span class="hint">— existing site to rework</span></label>
+      <div class="url-row">
+        <input type="text" id="refUrl" placeholder="https://c1t1zen.com" spellcheck="false">
+        <button class="inline-btn" id="fetchUrl" title="Pull readable text via r.jina.ai">Pull</button>
+      </div>
+      <textarea id="refText" rows="3" hidden></textarea>
+
+      <label for="styleLock">Style</label>
+      <select id="styleLock">
+        <option value="">Let the model choose (recommended)</option>
+      </select>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>03 · PROMPTS</summary>
+    <div class="panel-body">
+      <p style="font-size:12px;color:var(--mute);margin:8px 0 0">Edit these to retune the factory. Reset restores the defaults.</p>
+      <label for="p1">Stage 1 — brief generator</label>
+      <textarea id="p1" rows="8" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea>
+      <label for="p2">Stage 2 — builder</label>
+      <textarea id="p2" rows="8" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea>
+      <button class="inline-btn" id="resetPrompts" style="margin-top:12px">Reset prompts</button>
+    </div>
+  </details>
+
+  <div class="runbar">
+    <button class="btn" id="runAll">Run both stages</button>
+    <div class="btn-pair">
+      <button class="btn ghost" id="run1">Stage 1 only</button>
+      <button class="btn ghost" id="run2">Stage 2 only</button>
+    </div>
+    <button class="btn ghost" id="stop" hidden>Stop</button>
+  </div>
+</div>
+
+<!-- ==================== STAGE ==================== -->
+<div class="stage">
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tabBrief" role="tab" aria-selected="false" aria-controls="paneBrief">DESIGN BRIEF</button>
+    <button class="tab" id="tabCode"  role="tab" aria-selected="false" aria-controls="paneCode">PAGE CODE</button>
+    <button class="tab" id="tabPrev"  role="tab" aria-selected="false" aria-controls="panePrev">PREVIEW</button>
+    <span class="spacer"></span>
+    <div class="toolbar">
+      <button class="icon-btn" id="btnCopy" title="Copy" aria-label="Copy to clipboard" disabled>
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="1"/><path d="M5 15V4a1 1 0 0 1 1-1h9"/></svg>
+      </button>
+      <button class="icon-btn" id="btnPrev" title="Preview" aria-label="Preview rendered page" disabled>
+        <svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+      <button class="icon-btn" id="btnTab" title="Open in new tab" aria-label="Open in new tab" disabled>
+        <svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+      </button>
+      <button class="icon-btn" id="btnDl" title="Download" aria-label="Download file" disabled>
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="readout" aria-live="polite">
+    <span class="dot" id="dot"></span>
+    <span id="status">idle</span>
+    <span>·</span><span><b id="chars">0</b> chars</span>
+    <span>·</span><span><b id="secs">0.0</b>s</span>
+    <span id="styleReadout"></span>
+  </div>
+
+  <div class="viewport">
+    <div class="pane on" id="paneEmpty">
+      <div class="empty" id="how">
+        <h2>Bring your own model. Get a whole page.</h2>
+        <p>Stage&nbsp;1 turns your notes into a full design brief — style, palette, type, layout, copy, a signature interactive module, and a lead-capture spec. Stage&nbsp;2 builds that brief into one self-contained HTML file.</p>
+        <p>The brief is editable between stages. Rewrite anything you disagree with before you build.</p>
+        <ol>
+          <li>Point it at a model. For <code>llama-server</code>, use <code>http://localhost:8080/v1</code> and leave the key blank.</li>
+          <li>Write a few lines about the page. Detail is optional — gaps get filled and flagged.</li>
+          <li>Run both stages, then copy, preview, or download the result.</li>
+        </ol>
+        <p style="margin-top:22px;font-size:12.5px">Nothing is sent anywhere except the endpoint you name. There is no backend here — this is one static file.</p>
+      </div>
+    </div>
+    <div class="pane" id="paneBrief"><textarea class="editable" id="briefOut" spellcheck="false" placeholder="Stage 1 output lands here — and stays editable."></textarea></div>
+    <div class="pane" id="paneCode"><pre class="code" id="codeOut"></pre></div>
+    <div class="pane" id="panePrev"><iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-popups allow-forms allow-modals"></iframe></div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<!-- ============================================================
+     PROMPTS (text/plain so the markup inside stays literal)
+     ============================================================ -->
+<script type="text/plain" id="src-p1">
+You are the design lead at a studio known for giving every client a visual identity that could not be mistaken for anyone else's. This client has already rejected two rounds of work for feeling templated. You are being paid for a point of view.
+
+Your job right now is NOT to write code. It is to produce a complete design brief that a second model will build from. Write it so specifically that two different developers reading it would produce nearly the same page.
+
+If a brief field is missing or says "unknown", invent something concrete and credible and mark it [ASSUMED] so it can be corrected. Never write around a gap with vagueness.
+
+STEP 1 — STYLE SELECTION (constrained randomness)
+Do not pick a style you like. Do this instead:
+1. Name the content type in your own words (portfolio-of-motion, service-business-credibility, personal-technical-identity, visual-lookbook, operational-proof, etc.).
+2. List FOUR styles from the pool that would genuinely serve that content type, one sentence each on why. Exclude any style that fights the content — soft-shadow neumorphism against video thumbnails, ornate deco against a dense project index, low-contrast minimalism against a page whose whole job is showing images.
+3. Pick one of the four mechanically: take the number of characters in the client's name, mod 4, index into your list. State the calculation out loud.
+4. Write one line on why this style is the right argument for this client, not just why it looks good.
+If the brief locks a style, use it and skip straight to step 4.
+
+POOL (add your own if something fits better, and say so): Neobrutalist, Swiss/International, Editorial, Glassmorphism, Retro-futuristic, Bauhaus, Art Deco, Minimal, Flat, Material, Neumorphic, Monochromatic, Scandinavian, Japandi, Dark Mode First, Modernist, Organic/Fluid, Corporate Professional, Tech Forward, Luxury Minimal, Neo-Geo, Kinetic, Gradient Modern, Typography First, Metropolitan, Constructivist, Brutalist-Archival, Cinematic/Letterbox, Risograph, Technical-Schematic, Catalogue/Index, Nouvelle Vague poster, Warm Analog.
+You may blend two styles if you state which governs structure and which governs surface.
+
+STEP 2 — WRITE THE BRIEF
+Produce these eleven sections, in order, with these headings.
+
+1. CONCEPT & POSITIONING. The client, the offer, the audience's skepticism, and the single claim this page makes. One paragraph. No adjective that could apply to any other business.
+
+2. AESTHETIC DIRECTION. One dense paragraph written as atmosphere, not specification. What does a visitor feel in the first two seconds, at mid-scroll, at the moment they decide to make contact? Reach for spaces, materials, cultural periods, architecture, print traditions, light quality, craft. No brand names, no competitor sites. This paragraph is the soul of the brief.
+
+3. DESIGN TOKENS.
+   - Palette: 5-6 named hex values with roles (surface, ink, accent, accent-quiet, edge) and the intended contrast relationships. Every hue traceable to something in section 2.
+   - Type: one or two families from Google Fonts, named exactly, that actually exist. If two, they must be obviously different — not two grotesks. State role, weights, tracking at display sizes, body line-height, measure in characters.
+   - Scale: a stated ratio and the resulting steps.
+   - Space and shape: base unit, section rhythm, and a border-radius POLICY — where radius appears, where it does not, why. Uniform radius on everything is banned.
+
+4. LAYOUT SYSTEM. Grid, alignment (commit: left, centered, justified, asymmetric), and how the page breathes. Include a rough ASCII wireframe of the full scroll. Sections must not all share the same rhythm; at least two break the grid deliberately.
+
+5. PAGE ARCHITECTURE. Section by section, top to bottom, each with its job. Derive sections from THIS client's content, not from the Hero/Features/Testimonials/CTA template.
+
+6. THE SIGNATURE MODULE. Specify ONE custom interactive element that only makes sense for this client and that a visitor would describe to someone else afterward. Not a generic carousel. Describe its states, interaction, fallback, and what it proves about the client. This is where boldness gets spent; everything else stays disciplined.
+
+7. COPY DECK. Write the actual words. Hero headline, subhead, every section heading, body copy, all CTA labels, form labels, empty/error/success states, footer. Plain verbs, sentence case, active voice, no filler. CTA labels say what happens: "Book a 20-minute call", not "Get started".
+
+8. MOTION SPEC. One orchestrated moment on load, plus interaction-response motion. Name durations and easing. List explicitly what does NOT animate. Scroll-triggered fade-and-rise on every section is banned. prefers-reduced-motion collapses everything to instant.
+
+9. CONVERSION ARCHITECTURE.
+   - Primary CTA in at least three placements (hero, mid-page after proof, close), worded differently for where the reader is in the argument.
+   - A contact form with the fewest fields that still qualify a lead: name, email, one project-type selector, one free-text field with a specific placeholder prompt, optional timeline or budget selector. Nothing else.
+   - On submit: inline validation, a success state that sets expectations, and a graceful no-backend fallback — mailto: with pre-filled subject and body, or a form endpoint placeholder with a clear swap comment.
+   - Redundant paths: direct email, a booking-link slot, one portfolio or social link.
+   - One trust element beside the CTA: a credential, a named client, a specific result, or a rate range.
+
+10. ASSET STRATEGY. Assume no image files. Specify what is built from CSS, inline SVG, gradients, type, canvas. Where a real photo or video is required, define exact aspect ratio and leave a placeholder with a SWAP comment. Never link an external image URL that could 404. Video: poster attribute, lazy, muted, playsinline.
+
+11. ANTI-DEFAULTS. Restate for this page which of these are forbidden and what replaces each:
+   - Purple-to-blue diagonal gradient (#667eea to #764ba2) and relatives
+   - box-shadow: 0 4px 6px rgba(0,0,0,0.1) on identical rounded cards
+   - Inter or system-ui as the default answer to "typography"
+   - Tracked-out ALL-CAPS eyebrow labels above every heading
+   - One word in a headline colored or italicized for emphasis
+   - An arrow glyph appended to link and button text
+   - Meta strings joined with middle dots
+   - Numbered markers (01/02/03) on content that is not a sequence
+   - Emoji standing in for icons
+   - Everything centered
+   - Tinted near-black (#0B0B0B, #111) standing in for a real dark value
+   - Cream #F4F1EA plus high-contrast serif plus terracotta #D97757
+
+STEP 3 — SELF-CRITIQUE
+Ask: if I ran this same generation for a different client in the same industry, how much would be identical? Name those parts, revise them, and state what you changed. Then output the brief.
+
+Output the brief as plain readable text. No preamble, no sign-off.
+</script>
+
+<script type="text/plain" id="src-p2">
+Build the page specified in the design brief as ONE self-contained index.html file: HTML, an inline style block, and an inline script block. No build step, no framework, no npm. The only permitted external request is Google Fonts. Everything else you write by hand.
+
+TECHNICAL CONTRACT
+- Semantic HTML5. One h1. Landmarks (header, main, section, footer). Real labels on every input.
+- Mobile-first. Correct at 375px, 768px, 1440px. Nothing scrolls horizontally. Tap targets at least 44px. Most leads arrive on a phone: if it breaks at 375px it failed.
+- CSS custom properties for every token in the brief. No magic numbers scattered through the file.
+- Modern CSS encouraged: clamp() for fluid type, grid, :has(), container queries, color-mix(), scroll-driven animation — with sane fallbacks.
+- Watch selector specificity, especially section padding and margin. Do not write rules that cancel each other out.
+- Accessibility: visible keyboard focus (never remove outline without a replacement), body text at 4.5:1 or better, alt on meaningful images, aria-live on the form status region, full prefers-reduced-motion support.
+- Performance: no libraries. Vanilla JS only. IntersectionObserver over scroll listeners.
+- Comment the file with clear section markers, and mark every placeholder with a SWAP comment so the owner can drop in real assets.
+
+OUTPUT RULES
+- Output the complete file in ONE fenced code block tagged html. Nothing before it, nothing after it.
+- No truncation. No "remaining sections omitted". No "add the rest here". If it is long, it is long.
+- Do not summarize the design.
+
+FINAL CHECK
+Before you output, re-read the ANTI-DEFAULTS section of the brief. If any of them are in your file, rewrite that part.
+</script>
+
+<script>
+(() => {
+"use strict";
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+/* ---------- style pool for the lock dropdown ---------- */
+const STYLES = ["Neobrutalist","Swiss/International","Editorial","Glassmorphism","Retro-futuristic","Bauhaus","Art Deco","Minimal","Flat","Material","Neumorphic","Monochromatic","Scandinavian","Japandi","Dark Mode First","Modernist","Organic/Fluid","Corporate Professional","Tech Forward","Luxury Minimal","Neo-Geo","Kinetic","Gradient Modern","Typography First","Metropolitan","Constructivist","Brutalist-Archival","Cinematic/Letterbox","Risograph","Technical-Schematic","Catalogue/Index","Nouvelle Vague poster","Warm Analog"];
+STYLES.forEach(s => { const o = document.createElement("option"); o.value = o.textContent = s; $("styleLock").appendChild(o); });
+
+/* ---------- defaults ---------- */
+const DEFAULT_P1 = $("src-p1").textContent.trim();
+const DEFAULT_P2 = $("src-p2").textContent.trim();
+const BASES = { openai:"http://localhost:8080/v1", anthropic:"https://api.anthropic.com/v1" };
+
+const FIELDS = ["provider","baseUrl","model","temp","maxTokens","quickText","refUrl","styleLock",
+  "f_client","f_what","f_job","f_audience","f_proof","f_cta1","f_cta2","f_include","f_avoid","f_tone","f_constraints","p1","p2"];
+
+function loadSettings(){
+  FIELDS.forEach(k => { const v = store.get("pf:"+k); if(v !== null && $(k)) $(k).value = v; });
+  if(!$("p1").value) $("p1").value = DEFAULT_P1;
+  if(!$("p2").value) $("p2").value = DEFAULT_P2;
+  if(!$("baseUrl").value) $("baseUrl").value = BASES[$("provider").value];
+  const rk = store.get("pf:rememberKey") === "1";
+  $("rememberKey").checked = rk;
+  if(rk) $("apiKey").value = store.get("pf:apiKey") || "";
+  if(store.get("pf:mode") === "full") setMode("full");
+}
+function saveSettings(){
+  FIELDS.forEach(k => { if($(k)) store.set("pf:"+k, $(k).value); });
+  store.set("pf:rememberKey", $("rememberKey").checked ? "1" : "0");
+  if($("rememberKey").checked) store.set("pf:apiKey", $("apiKey").value); else store.del("pf:apiKey");
+}
+document.addEventListener("input", saveSettings);
+document.addEventListener("change", saveSettings);
+
+$("provider").addEventListener("change", () => {
+  const p = $("provider").value;
+  const cur = $("baseUrl").value.trim();
+  if(!cur || Object.values(BASES).includes(cur)) $("baseUrl").value = BASES[p];
+  saveSettings();
+});
+$("resetPrompts").addEventListener("click", () => {
+  $("p1").value = DEFAULT_P1; $("p2").value = DEFAULT_P2; saveSettings(); toast("prompts reset");
+});
+
+/* ---------- brief mode ---------- */
+function setMode(m){
+  const q = m === "quick";
+  $("quickPane").hidden = !q; $("fullPane").hidden = q;
+  $("modeQuick").setAttribute("aria-pressed", String(q));
+  $("modeFull").setAttribute("aria-pressed", String(!q));
+  store.set("pf:mode", m);
+}
+$("modeQuick").addEventListener("click", () => setMode("quick"));
+$("modeFull").addEventListener("click", () => setMode("full"));
+
+/* ---------- tabs ---------- */
+const PANES = { empty:"paneEmpty", brief:"paneBrief", code:"paneCode", prev:"panePrev" };
+let tab = "empty";
+function show(which){
+  tab = which;
+  Object.entries(PANES).forEach(([k,id]) => $(id).classList.toggle("on", k === which));
+  [["brief","tabBrief"],["code","tabCode"],["prev","tabPrev"]].forEach(([k,id]) =>
+    $(id).setAttribute("aria-selected", String(k === which)));
+  syncToolbar();
+}
+$("tabBrief").addEventListener("click", () => show("brief"));
+$("tabCode").addEventListener("click", () => show("code"));
+$("tabPrev").addEventListener("click", () => { renderPreview(); show("prev"); });
+
+/* ---------- toolbar ---------- */
+let pageCode = "";
+function syncToolbar(){
+  const hasBrief = $("briefOut").value.trim().length > 0;
+  const hasCode = pageCode.trim().length > 0;
+  const copyable = (tab === "brief" && hasBrief) || ((tab === "code" || tab === "prev") && hasCode);
+  $("btnCopy").disabled = !copyable;
+  $("btnPrev").disabled = !hasCode;
+  $("btnTab").disabled = !hasCode;
+  $("btnDl").disabled = !(hasCode || hasBrief);
+}
+$("briefOut").addEventListener("input", syncToolbar);
+
+$("btnCopy").addEventListener("click", async () => {
+  const text = tab === "brief" ? $("briefOut").value : pageCode;
+  try{ await navigator.clipboard.writeText(text); toast("copied"); }
+  catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); ta.remove(); toast("copied");
+  }
+});
+$("btnPrev").addEventListener("click", () => { renderPreview(); show("prev"); });
+$("btnTab").addEventListener("click", () => {
+  const url = URL.createObjectURL(new Blob([pageCode], {type:"text/html"}));
+  window.open(url, "_blank", "noopener");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+});
+$("btnDl").addEventListener("click", () => {
+  const isBrief = tab === "brief";
+  const body = isBrief ? $("briefOut").value : pageCode;
+  const name = isBrief ? "design-brief.md" : "index.html";
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([body], {type: isBrief ? "text/markdown" : "text/html"}));
+  a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast("saved " + name);
+});
+function renderPreview(){ $("frame").srcdoc = pageCode; }
+
+/* ---------- status readout ---------- */
+let t0 = 0, timer = null;
+function setStatus(text, state){
+  $("status").textContent = text;
+  $("dot").className = "dot" + (state ? " " + state : "");
+}
+function startClock(){
+  t0 = performance.now();
+  clearInterval(timer);
+  timer = setInterval(() => { $("secs").textContent = ((performance.now()-t0)/1000).toFixed(1); }, 100);
+}
+function stopClock(){ clearInterval(timer); $("secs").textContent = ((performance.now()-t0)/1000).toFixed(1); }
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(t._x); t._x = setTimeout(() => t.classList.remove("on"), 1500);
+}
+function notice(html){
+  document.querySelectorAll(".notice").forEach(n => n.remove());
+  const d = document.createElement("div");
+  d.className = "notice"; d.innerHTML = html;
+  $("paneEmpty").prepend(d);
+  if(tab !== "empty" && !$("briefOut").value) show("empty");
+}
+
+/* ---------- API layer ---------- */
+let controller = null;
+
+function headersFor(){
+  const key = $("apiKey").value.trim();
+  if($("provider").value === "anthropic"){
+    const h = { "content-type":"application/json", "anthropic-version":"2023-06-01",
+                "anthropic-dangerous-direct-browser-access":"true" };
+    if(key) h["x-api-key"] = key;
+    return h;
+  }
+  const h = { "content-type":"application/json" };
+  if(key) h["authorization"] = "Bearer " + key;
+  return h;
+}
+function base(){ return $("baseUrl").value.trim().replace(/\/+$/,""); }
+
+async function fetchModels(){
+  const btn = $("fetchModels");
+  btn.disabled = true; btn.textContent = "…";
+  try{
+    const r = await fetch(base() + "/models", { headers: headersFor() });
+    if(!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0,200));
+    const j = await r.json();
+    const ids = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean).sort();
+    const dl = $("modelList"); dl.innerHTML = "";
+    ids.forEach(id => { const o = document.createElement("option"); o.value = id; dl.appendChild(o); });
+    if(ids.length && !$("model").value) $("model").value = ids[0];
+    toast(ids.length + " models");
+  }catch(e){ explain(e); }
+  finally{ btn.disabled = false; btn.textContent = "Fetch"; }
+}
+$("fetchModels").addEventListener("click", fetchModels);
+
+function explain(e){
+  const m = String(e && e.message || e);
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m)){
+    notice(`<b>Could not reach the endpoint.</b> Usually one of three things:
+      <br>· <b>Mixed content</b> — this page is on HTTPS and your server is on plain <code>http://</code>. Serve this file locally over http, or put TLS in front of your server.
+      <br>· <b>CORS</b> — start llama-server with <code>--host 0.0.0.0</code>; it sends permissive CORS headers by default. Ollama needs <code>OLLAMA_ORIGINS=*</code>.
+      <br>· <b>Wrong base URL</b> — it must end in <code>/v1</code>.`);
+  } else {
+    notice("<b>Request failed.</b> " + m.replace(/[<>]/g, ""));
+  }
+  setStatus("error", "err");
+}
+
+async function stream(systemPrompt, userPrompt, onChunk){
+  const isAnthropic = $("provider").value === "anthropic";
+  const body = isAnthropic
+    ? { model:$("model").value.trim(), max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+        system:systemPrompt, messages:[{role:"user", content:userPrompt}], stream:true }
+    : { model:$("model").value.trim(), max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+        messages:[{role:"system", content:systemPrompt},{role:"user", content:userPrompt}], stream:true };
+
+  controller = new AbortController();
+  const res = await fetch(base() + (isAnthropic ? "/messages" : "/chat/completions"), {
+    method:"POST", headers:headersFor(), body:JSON.stringify(body), signal:controller.signal
+  });
+  if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
+
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", out = "";
+  while(true){
+    const { done, value } = await reader.read();
+    if(done) break;
+    buf += dec.decode(value, {stream:true});
+    const parts = buf.split("\n\n");
+    buf = parts.pop();
+    for(const part of parts){
+      for(const line of part.split("\n")){
+        if(!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if(!payload || payload === "[DONE]") continue;
+        let j; try{ j = JSON.parse(payload); }catch(e){ continue; }
+        let piece = "";
+        if(isAnthropic){
+          if(j.type === "content_block_delta" && j.delta && j.delta.text) piece = j.delta.text;
+          if(j.type === "error") throw new Error(j.error && j.error.message || "stream error");
+        } else {
+          const d = j.choices && j.choices[0];
+          piece = (d && d.delta && d.delta.content) || (d && d.text) || "";
+        }
+        if(piece){ out += piece; onChunk(piece, out); }
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- brief assembly ---------- */
+function briefBlock(){
+  const q = $("modeQuick").getAttribute("aria-pressed") === "true";
+  const ref = $("refText").value.trim();
+  const style = $("styleLock").value;
+  let b = "";
+  if(q){
+    b = "THE BRIEF (freeform — fill any gaps yourself and tag them [ASSUMED]):\n\n" + $("quickText").value.trim();
+  } else {
+    const g = id => ($(id).value.trim() || "unknown");
+    b = [
+      "THE BRIEF:",
+      "CLIENT / OWNER:  " + g("f_client"),
+      "WHAT THEY DO:    " + g("f_what"),
+      "THE PAGE'S JOB:  " + g("f_job"),
+      "AUDIENCE:        " + g("f_audience"),
+      "PROOF ASSETS:    " + g("f_proof"),
+      "PRIMARY CTA:     " + g("f_cta1"),
+      "SECONDARY CTA:   " + g("f_cta2"),
+      "MUST INCLUDE:    " + g("f_include"),
+      "MUST AVOID:      " + g("f_avoid"),
+      "TONE:            " + g("f_tone"),
+      "CONSTRAINTS:     " + g("f_constraints")
+    ].join("\n");
+  }
+  if($("refUrl").value.trim()) b += "\n\nEXISTING / REFERENCE SITE: " + $("refUrl").value.trim();
+  if(ref) b += "\n\nTEXT PULLED FROM THAT SITE (use the real content, do not invent around it):\n" + ref.slice(0,12000);
+  if(style) b += "\n\nSTYLE LOCK: " + style + " — use this style. Skip the selection steps and justify the fit instead.";
+  return b;
+}
+
+/* ---------- code extraction ---------- */
+function extractHtml(text){
+  const fence = text.match(/```(?:html|HTML)?\s*\n([\s\S]*?)```/);
+  let code = fence ? fence[1] : text;
+  if(!/<!DOCTYPE|<html/i.test(code)){
+    const i = text.search(/<!DOCTYPE html|<html/i);
+    if(i >= 0){ code = text.slice(i); const end = code.lastIndexOf("</html>"); if(end > 0) code = code.slice(0, end+7); }
+  }
+  return code.trim();
+}
+
+/* ---------- runs ---------- */
+let busy = false;
+function setBusy(on){
+  busy = on;
+  ["runAll","run1","run2"].forEach(id => $(id).disabled = on);
+  $("stop").hidden = !on;
+}
+$("stop").addEventListener("click", () => { if(controller) controller.abort(); });
+
+function preflight(){
+  document.querySelectorAll(".notice").forEach(n => n.remove());
+  if(!$("model").value.trim()){ notice("<b>No model set.</b> Type a model name, or press Fetch to list what the endpoint offers."); return false; }
+  if(!base()){ notice("<b>No base URL.</b>"); return false; }
+  return true;
+}
+
+async function runStage1(){
+  if(!preflight()) return false;
+  setBusy(true); startClock(); setStatus("stage 1 — writing brief", "live");
+  $("briefOut").value = ""; show("brief");
+  try{
+    await stream($("p1").value, briefBlock(), (_p, all) => {
+      $("briefOut").value = all;
+      $("chars").textContent = all.length;
+      $("briefOut").scrollTop = $("briefOut").scrollHeight;
+    });
+    const m = $("briefOut").value.match(/(?:^|\n)\s*(?:STYLE|Selected style|CHOSEN STYLE)[^\n]*/i);
+    $("styleReadout").textContent = m ? "· " + m[0].trim().slice(0,60) : "";
+    setStatus("brief ready — edit it, then build", "");
+    syncToolbar();
+    return true;
+  }catch(e){
+    if(e.name === "AbortError"){ setStatus("stopped", ""); } else { explain(e); }
+    return false;
+  }finally{ setBusy(false); stopClock(); }
+}
+
+async function runStage2(){
+  if(!preflight()) return false;
+  const brief = $("briefOut").value.trim();
+  if(!brief){ notice("<b>No brief yet.</b> Run stage 1 first, or paste a brief into the Design Brief tab."); return false; }
+  setBusy(true); startClock(); setStatus("stage 2 — building page", "live");
+  pageCode = ""; $("codeOut").textContent = ""; show("code");
+  try{
+    const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
+      $("codeOut").textContent = all;
+      $("chars").textContent = all.length;
+      $("codeOut").parentElement.scrollTop = $("codeOut").parentElement.scrollHeight;
+    });
+    pageCode = extractHtml(raw);
+    $("codeOut").textContent = pageCode;
+    if(!/<\/html>/i.test(pageCode)) setStatus("built — output looks truncated, raise max tokens", "err");
+    else setStatus("page ready", "");
+    syncToolbar(); renderPreview();
+    return true;
+  }catch(e){
+    if(e.name === "AbortError"){ setStatus("stopped", ""); pageCode = extractHtml($("codeOut").textContent); syncToolbar(); }
+    else explain(e);
+    return false;
+  }finally{ setBusy(false); stopClock(); }
+}
+
+$("run1").addEventListener("click", runStage1);
+$("run2").addEventListener("click", runStage2);
+$("runAll").addEventListener("click", async () => { if(await runStage1()) await runStage2(); });
+
+document.addEventListener("keydown", e => {
+  if((e.metaKey || e.ctrlKey) && e.key === "Enter" && !busy){ e.preventDefault(); $("runAll").click(); }
+});
+
+/* ---------- reference URL pull ---------- */
+$("fetchUrl").addEventListener("click", async () => {
+  const u = $("refUrl").value.trim();
+  if(!u) return;
+  const btn = $("fetchUrl"); btn.disabled = true; btn.textContent = "…";
+  try{
+    const r = await fetch("https://r.jina.ai/" + u);
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const t = await r.text();
+    $("refText").value = t.slice(0, 12000);
+    $("refText").hidden = false;
+    toast("pulled " + $("refText").value.length + " chars");
+  }catch(e){
+    notice("<b>Could not read that URL.</b> The reader service (r.jina.ai) may be rate-limited or the site may block it. Paste the page's text into the box below the URL field instead.");
+    $("refText").hidden = false;
+  }finally{ btn.disabled = false; btn.textContent = "Pull"; }
+});
+
+$("howlink").addEventListener("click", e => { e.preventDefault(); show("empty"); });
+
+loadSettings();
+syncToolbar();
+})();
+</script>
+</body>
+</html>
