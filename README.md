@@ -114,7 +114,7 @@ The app tells you which one you hit right when it happens, so you're never guess
 ## A few tips for best results
 
 - Set **max tokens** to at least 16000 — a full page is long, and a cut-off build is the most common hiccup. The status bar flags it for you.
-- Temperature around `0.9` works well for the creative brief step; lower it if you want the build step to be more literal. Current Claude reasoning models use **Reasoning effort** instead: start at `high`, or choose `low`/`medium` to reduce latency and token use.
+- Temperature around `0.9` works well for the creative brief step; lower it if you want the build step to be more literal. When an effort-capable Claude model is selected, **Reasoning effort** replaces Temperature directly below the Model picker; start at `high`, or choose `low`/`medium` to reduce latency and token use. Claude Haiku 4.5 does not support this control.
 - Your API key only ever gets stored in *your own browser* if you tick "Remember key," and it's only ever sent to the endpoint you chose. Nothing passes through any third-party server.
 - The actual prompts that drive the AI live right in the **PROMPTS** panel in the app — feel free to read them, learn from them, or rewrite them entirely. That's the real product; the interface is just the runner.
 

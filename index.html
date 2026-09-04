@@ -640,7 +640,7 @@ const PROVIDERS = {
     label: "Anthropic",
     base: "https://api.anthropic.com/v1",
     format: "anthropic",
-    models: ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
+    models: ["claude-opus-5", "claude-sonnet-5", "claude-fable-5-1", "claude-haiku-4-5-20251001"],
     keyHint: "— sk-ant-…",
     keyPlaceholder: "sk-ant-…"
   },
@@ -687,17 +687,23 @@ function currentModel(){
   return v.trim();
 }
 
-/* Claude's newer adaptive-thinking models do not accept non-default sampling
-   parameters. Claude 4.6–4.8 need thinking.type=adaptive explicitly; Claude
-   5-family models use adaptive thinking by default. */
+/* The Models API advertises effort support directly. Name matching remains as
+   a fallback when model discovery is unavailable. Claude 4.6–4.8 need
+   thinking.type=adaptive explicitly; Claude 5-family models use it by default. */
 const anthropicEffortOverrides = new Set();
+const anthropicModelCapabilities = new Map();
 function anthropicEffortModel(model = currentModel()){
   if($("provider").value !== "anthropic") return false;
   if(anthropicEffortOverrides.has(model)) return true;
-  return /claude-(?:opus|sonnet)-4-(?:6|7|8)(?:\b|-)|claude-(?:opus|sonnet|fable|mythos)-5(?:\b|[.-])/i.test(model);
+  if(anthropicModelCapabilities.has(model)) return anthropicModelCapabilities.get(model);
+  return /claude-(?:opus|sonnet)-4-(?:5|6|7|8)(?:\b|-)|claude-(?:opus|sonnet|fable|mythos)-5(?:\b|[.-])/i.test(model);
 }
 function anthropicAdaptiveThinkingModel(model = currentModel()){
   return /claude-(?:opus|sonnet)-4-(?:6|7|8)(?:\b|-)/i.test(model);
+}
+function modelSupportsAnthropicEffort(model){
+  const effort = model && model.capabilities && model.capabilities.effort;
+  return !!(effort && (effort.supported === true || ["low","medium","high","max"].some(level => effort[level] && effort[level].supported === true)));
 }
 function syncSamplingControl(){
   const usesEffort = anthropicEffortModel();
@@ -999,9 +1005,20 @@ async function fetchModels(opts = {}){
     const r = await fetch(base() + "/models", { headers: headersFor(), signal:ctl.signal });
     if(!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0,200));
     const j = await r.json();
-    const ids = (j.data || j.models || []).map(m => m && (m.id || m.name)).filter(Boolean).sort();
+    const models = (j.data || j.models || []).filter(Boolean);
+    const ids = models.map(m => m.id || m.name).filter(Boolean).sort();
+    if(cfg.format === "anthropic"){
+      anthropicModelCapabilities.clear();
+      models.forEach(m => {
+        const id = m.id || m.name;
+        if(id) anthropicModelCapabilities.set(id, modelSupportsAnthropicEffort(m));
+      });
+    }
     // Keep the pick only when the endpoint really still offers it.
-    setModelOptions(ids, (previous && previous !== "__custom__" && ids.indexOf(previous) > -1) ? previous : "");
+    const selected = (previous && previous !== "__custom__" && ids.indexOf(previous) > -1)
+      ? previous
+      : (cfg.format === "anthropic" ? ids.find(id => anthropicEffortModel(id)) || "" : "");
+    setModelOptions(ids, selected);
     syncSamplingControl();
     if(!quiet) toast(ids.length ? ids.length + " models loaded" : "Endpoint returned no models");
   }catch(e){
