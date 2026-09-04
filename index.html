@@ -348,6 +348,7 @@ iframe.preview[hidden]{ display:none; }
         <option value="ollama">Ollama</option>
         <option value="lmstudio">LM Studio</option>
         <option value="openrouter">OpenRouter</option>
+        <option value="nvidia">NVIDIA NIM</option>
         <option value="custom">Custom (OpenAI-compatible)</option>
       </select>
 
@@ -372,11 +373,14 @@ iframe.preview[hidden]{ display:none; }
           <input type="number" id="temp" value="0.9" min="0" max="2" step="0.1">
         </div>
         <div id="effortControl" hidden>
-          <label for="effort">Reasoning effort <span class="hint">— Claude 4.6+</span></label>
+          <label for="effort">Reasoning effort <span class="hint">— supported models</span></label>
           <select id="effort">
+            <option value="minimal">Minimal</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high" selected>High</option>
+            <option value="xhigh">Extra high</option>
+            <option value="max">Maximum</option>
           </select>
         </div>
         <div>
@@ -683,9 +687,18 @@ const PROVIDERS = {
     label: "OpenRouter",
     base: "https://openrouter.ai/api/v1",
     format: "openai",
+    reasoningFormat: "openrouter",
     models: ["anthropic/claude-3.7-sonnet", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "google/gemini-2.0-flash-001"],
     keyHint: "— sk-or-…",
     keyPlaceholder: "sk-or-…"
+  },
+  nvidia: {
+    label: "NVIDIA NIM",
+    base: "https://integrate.api.nvidia.com/v1",
+    format: "openai",
+    models: [],
+    keyHint: "— NVIDIA API key",
+    keyPlaceholder: "nvapi-…"
   },
   custom: {
     label: "Custom (OpenAI-compatible)",
@@ -711,6 +724,11 @@ function currentModel(){
    thinking.type=adaptive explicitly; Claude 5-family models use it by default. */
 const anthropicEffortOverrides = new Set();
 const anthropicModelCapabilities = new Map();
+const modelSamplingCapabilities = new Map();
+const EFFORT_ORDER = ["minimal","low","medium","high","xhigh","max"];
+function modelCapabilityKey(provider = $("provider").value, model = currentModel()){
+  return provider + ":" + model;
+}
 function anthropicEffortModel(model = currentModel()){
   if($("provider").value !== "anthropic") return false;
   if(anthropicEffortOverrides.has(model)) return true;
@@ -724,8 +742,30 @@ function modelSupportsAnthropicEffort(model){
   const effort = model && model.capabilities && model.capabilities.effort;
   return !!(effort && (effort.supported === true || ["low","medium","high","max"].some(level => effort[level] && effort[level].supported === true)));
 }
+function openAiReasoningCapability(model = currentModel()){
+  return modelSamplingCapabilities.get(modelCapabilityKey()) || null;
+}
+function setEffortOptions(supportedEfforts, selectedEffort){
+  const sel = $("effort");
+  const levels = Array.isArray(supportedEfforts) && supportedEfforts.length
+    ? EFFORT_ORDER.filter(level => supportedEfforts.includes(level))
+    : EFFORT_ORDER;
+  const current = selectedEffort || sel.value;
+  sel.innerHTML = "";
+  levels.forEach(level => {
+    const option = document.createElement("option");
+    option.value = level;
+    option.textContent = level === "xhigh" ? "Extra high" : level === "max" ? "Maximum" : level[0].toUpperCase() + level.slice(1);
+    sel.appendChild(option);
+  });
+  sel.value = levels.includes(current) ? current : (levels.includes("high") ? "high" : levels[0]);
+}
 function syncSamplingControl(){
-  const usesEffort = anthropicEffortModel();
+  const p = $("provider").value;
+  const cfg = PROVIDERS[p] || PROVIDERS.custom;
+  const openAiCapability = openAiReasoningCapability();
+  const usesEffort = anthropicEffortModel() || !!(cfg.reasoningFormat === "openrouter" && openAiCapability && openAiCapability.reasoning);
+  if(usesEffort) setEffortOptions(openAiCapability && openAiCapability.efforts, openAiCapability && openAiCapability.defaultEffort);
   $("tempControl").hidden = usesEffort;
   $("effortControl").hidden = !usesEffort;
 }
@@ -1032,11 +1072,29 @@ async function fetchModels(opts = {}){
         const id = m.id || m.name;
         if(id) anthropicModelCapabilities.set(id, modelSupportsAnthropicEffort(m));
       });
+    } else if(cfg.reasoningFormat === "openrouter") {
+      models.forEach(m => {
+        const id = m.id || m.name;
+        if(!id) return;
+        const supported = Array.isArray(m.supported_parameters) ? m.supported_parameters : [];
+        const reasoning = m.reasoning || {};
+        const efforts = Array.isArray(reasoning.supported_efforts) ? reasoning.supported_efforts : [];
+        modelSamplingCapabilities.set(modelCapabilityKey($("provider").value, id), {
+          reasoning: supported.includes("reasoning") || supported.includes("reasoning_effort") || efforts.length > 0,
+          efforts,
+          defaultEffort: reasoning.default_effort || "",
+          temperature: supported.length ? supported.includes("temperature") : true
+        });
+      });
     }
     // Keep the pick only when the endpoint really still offers it.
     const selected = (previous && previous !== "__custom__" && ids.indexOf(previous) > -1)
       ? previous
-      : (cfg.format === "anthropic" ? ids.find(id => anthropicEffortModel(id)) || "" : "");
+      : (cfg.format === "anthropic" ? ids.find(id => anthropicEffortModel(id)) || ""
+        : (cfg.reasoningFormat === "openrouter" ? ids.find(id => {
+            const capability = modelSamplingCapabilities.get(modelCapabilityKey($("provider").value, id));
+            return capability && capability.reasoning;
+          }) || "" : ""));
     setModelOptions(ids, selected);
     syncSamplingControl();
     if(!quiet) toast(ids.length ? ids.length + " models loaded" : "Endpoint returned no models");
@@ -1082,10 +1140,12 @@ async function stream(systemPrompt, userPrompt, onChunk){
   const isAnthropic = cfg.format === "anthropic";
   const activeModel = currentModel();
   const usesAnthropicEffort = isAnthropic && anthropicEffortModel(activeModel);
+  const openAiCapability = !isAnthropic && openAiReasoningCapability(activeModel);
+  const usesOpenAiReasoning = cfg.reasoningFormat === "openrouter" && !!(openAiCapability && openAiCapability.reasoning);
   const body = isAnthropic
     ? { model:activeModel, max_tokens:+$("maxTokens").value,
         system:systemPrompt, messages:[{role:"user", content:userPrompt}], stream:true }
-    : { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+    : { model:activeModel, max_tokens:+$("maxTokens").value,
         messages:[{role:"system", content:systemPrompt},{role:"user", content:userPrompt}], stream:true };
 
   if(isAnthropic){
@@ -1095,6 +1155,10 @@ async function stream(systemPrompt, userPrompt, onChunk){
     } else {
       body.temperature = +$("temp").value;
     }
+  } else if(usesOpenAiReasoning){
+    body.reasoning = { effort:$("effort").value };
+  } else {
+    body.temperature = +$("temp").value;
   }
 
   /* Qwen thinking models served by llama.cpp can stream reasoning tokens for a
@@ -1122,6 +1186,10 @@ async function stream(systemPrompt, userPrompt, onChunk){
       res = await request();
       if(res.ok) syncSamplingControl();
       else throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
+    } else if(!isAnthropic && body.temperature !== undefined && res.status === 400 && /temperature.*deprecated/i.test(errorText)){
+      delete body.temperature;
+      res = await request();
+      if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
     } else {
       throw new Error("HTTP " + res.status + " — " + errorText.slice(0,300));
     }
