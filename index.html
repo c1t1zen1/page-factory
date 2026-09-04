@@ -348,9 +348,17 @@ iframe.preview[hidden]{ display:none; }
       </div>
 
       <div class="row">
-        <div>
+        <div id="tempControl">
           <label for="temp">Temperature</label>
           <input type="number" id="temp" value="0.9" min="0" max="2" step="0.1">
+        </div>
+        <div id="effortControl" hidden>
+          <label for="effort">Reasoning effort <span class="hint">— Claude 4.6+</span></label>
+          <select id="effort">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high" selected>High</option>
+          </select>
         </div>
         <div>
           <label for="maxTokens">Max tokens</label>
@@ -632,7 +640,7 @@ const PROVIDERS = {
     label: "Anthropic",
     base: "https://api.anthropic.com/v1",
     format: "anthropic",
-    models: ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+    models: ["claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5-20251001"],
     keyHint: "— sk-ant-…",
     keyPlaceholder: "sk-ant-…"
   },
@@ -670,13 +678,31 @@ const PROVIDERS = {
   }
 };
 
-const FIELDS = ["provider","baseUrl","temp","maxTokens","quickText","refUrl","styleLock",
+const FIELDS = ["provider","baseUrl","temp","effort","maxTokens","quickText","refUrl","styleLock",
   "f_client","f_what","f_job","f_audience","f_proof","f_cta1","f_cta2","f_include","f_avoid","f_tone","f_constraints","p1","p2"];
 
 function currentModel(){
   const v = $("model").value;
   if(v === "__custom__") return $("customModel").value.trim();
   return v.trim();
+}
+
+/* Claude's newer adaptive-thinking models do not accept non-default sampling
+   parameters. Claude 4.6–4.8 need thinking.type=adaptive explicitly; Claude
+   5-family models use adaptive thinking by default. */
+const anthropicEffortOverrides = new Set();
+function anthropicEffortModel(model = currentModel()){
+  if($("provider").value !== "anthropic") return false;
+  if(anthropicEffortOverrides.has(model)) return true;
+  return /claude-(?:opus|sonnet)-4-(?:6|7|8)(?:\b|-)|claude-(?:opus|sonnet|fable|mythos)-5(?:\b|[.-])/i.test(model);
+}
+function anthropicAdaptiveThinkingModel(model = currentModel()){
+  return /claude-(?:opus|sonnet)-4-(?:6|7|8)(?:\b|-)/i.test(model);
+}
+function syncSamplingControl(){
+  const usesEffort = anthropicEffortModel();
+  $("tempControl").hidden = usesEffort;
+  $("effortControl").hidden = !usesEffort;
 }
 
 /* One writer for the model dropdown. Provider switches and Fetch both go
@@ -735,6 +761,7 @@ function onProviderChange(){
   if(hint) hint.textContent = cfg.keyHint;
   $("apiKey").placeholder = cfg.keyPlaceholder;
 
+  syncSamplingControl();
   saveSettings();
   fetchModels({ quiet:true });        // refresh the list against the new endpoint
 }
@@ -744,9 +771,10 @@ $("model").addEventListener("change", () => {
   const isCustom = $("model").value === "__custom__";
   $("customModelBox").style.display = isCustom ? "block" : "none";
   if(isCustom) $("customModel").focus();
+  syncSamplingControl();
   saveSettings();
 });
-$("customModel").addEventListener("input", saveSettings);
+$("customModel").addEventListener("input", () => { syncSamplingControl(); saveSettings(); });
 
 function loadSettings(){
   FIELDS.forEach(k => { const v = store.get("pf:"+k); if(v !== null && $(k)) $(k).value = v; });
@@ -771,6 +799,7 @@ function loadSettings(){
   if($("model").value === "__custom__"){
     $("customModelBox").style.display = "block";
   }
+  syncSamplingControl();
 
   if(!$("p1").value) $("p1").value = DEFAULT_P1;
   if(!$("p2").value) $("p2").value = DEFAULT_P2;
@@ -973,12 +1002,14 @@ async function fetchModels(opts = {}){
     const ids = (j.data || j.models || []).map(m => m && (m.id || m.name)).filter(Boolean).sort();
     // Keep the pick only when the endpoint really still offers it.
     setModelOptions(ids, (previous && previous !== "__custom__" && ids.indexOf(previous) > -1) ? previous : "");
+    syncSamplingControl();
     if(!quiet) toast(ids.length ? ids.length + " models loaded" : "Endpoint returned no models");
   }catch(e){
     if(e && e.name === "AbortError") return;
     // Nothing came back: put the provider's own list plus the user's pick back.
     setModelOptions(cfg.models || [], previous);
     if(previous === "__custom__") $("customModel").value = previousCustom;
+    syncSamplingControl();
     if(quiet){ if(!busy) setStatus("model list unavailable — pick one or press Fetch", ""); }
     else explain(e);
   }finally{
@@ -1014,11 +1045,21 @@ async function stream(systemPrompt, userPrompt, onChunk){
   const cfg = PROVIDERS[p] || PROVIDERS.custom;
   const isAnthropic = cfg.format === "anthropic";
   const activeModel = currentModel();
+  const usesAnthropicEffort = isAnthropic && anthropicEffortModel(activeModel);
   const body = isAnthropic
-    ? { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+    ? { model:activeModel, max_tokens:+$("maxTokens").value,
         system:systemPrompt, messages:[{role:"user", content:userPrompt}], stream:true }
     : { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
         messages:[{role:"system", content:systemPrompt},{role:"user", content:userPrompt}], stream:true };
+
+  if(isAnthropic){
+    if(usesAnthropicEffort){
+      body.output_config = { effort:$("effort").value };
+      if(anthropicAdaptiveThinkingModel(activeModel)) body.thinking = { type:"adaptive" };
+    } else {
+      body.temperature = +$("temp").value;
+    }
+  }
 
   /* Qwen thinking models served by llama.cpp can stream reasoning tokens for a
      long time before their first visible token. Page Factory never displays
@@ -1028,10 +1069,27 @@ async function stream(systemPrompt, userPrompt, onChunk){
   if(p === "llamacpp") body.chat_template_kwargs = { enable_thinking:false };
 
   controller = new AbortController();
-  const res = await fetch(base() + (isAnthropic ? "/messages" : "/chat/completions"), {
+  const endpoint = base() + (isAnthropic ? "/messages" : "/chat/completions");
+  const request = () => fetch(endpoint, {
     method:"POST", headers:headersFor(), body:JSON.stringify(body), signal:controller.signal
   });
-  if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
+  let res = await request();
+  if(!res.ok){
+    const errorText = await res.text();
+    /* Model IDs change more often than this static tool can. If Anthropic
+       explicitly identifies an unknown model as effort-based, recover once
+       with the documented effort configuration instead of exposing the 400. */
+    if(isAnthropic && body.temperature !== undefined && res.status === 400 && /temperature.*deprecated/i.test(errorText)){
+      anthropicEffortOverrides.add(activeModel);
+      delete body.temperature;
+      body.output_config = { effort:$("effort").value };
+      res = await request();
+      if(res.ok) syncSamplingControl();
+      else throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
+    } else {
+      throw new Error("HTTP " + res.status + " — " + errorText.slice(0,300));
+    }
+  }
 
   if(!res.body) throw new Error("The endpoint returned no response body.");
   const reader = res.body.getReader();
