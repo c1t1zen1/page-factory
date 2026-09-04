@@ -489,7 +489,7 @@ iframe.preview[hidden]{ display:none; }
         <strong>No preview yet</strong>
         <span>Run <code>Stage 2</code> (or <code>Run both stages</code>) and the finished page renders here.</span>
       </div>
-      <iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals" hidden></iframe>
+      <iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-popups allow-forms allow-modals" hidden></iframe>
     </div>
   </div>
 </div>
@@ -859,14 +859,14 @@ $("btnCopy").addEventListener("click", async () => {
 });
 $("btnPrev").addEventListener("click", openPreview);
 $("btnTab").addEventListener("click", () => {
-  const codeToOpen = pageCode || $("codeOut").textContent;
+  const codeToOpen = extractHtml(pageCode || $("codeOut").textContent);
   const url = URL.createObjectURL(new Blob([codeToOpen], {type:"text/html"}));
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 });
 $("btnDl").addEventListener("click", () => {
   const isBrief = tab === "brief";
-  const body = isBrief ? $("briefOut").value : (pageCode || $("codeOut").textContent);
+  const body = isBrief ? $("briefOut").value : extractHtml(pageCode || $("codeOut").textContent);
   const name = isBrief ? "design-brief.md" : "index.html";
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([body], {type: isBrief ? "text/markdown" : "text/html"}));
@@ -998,9 +998,15 @@ function explain(e){
       <br>· <b>CORS</b> — start llama-server with <code>--host 0.0.0.0</code>; it sends permissive CORS headers by default. Ollama needs <code>OLLAMA_ORIGINS=*</code>.
       <br>· <b>Wrong base URL</b> — it must end in <code>/v1</code>.`);
   } else {
-    notice("<b>Request failed.</b> " + m.replace(/[<>]/g, ""));
+    notice("<b>Request failed.</b> " + escapeHtml(m));
   }
   setStatus("error", "err");
+}
+
+function escapeHtml(text){
+  return String(text).replace(/[&<>"']/g, c => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;"
+  })[c]);
 }
 
 async function stream(systemPrompt, userPrompt, onChunk){
@@ -1014,39 +1020,61 @@ async function stream(systemPrompt, userPrompt, onChunk){
     : { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
         messages:[{role:"system", content:systemPrompt},{role:"user", content:userPrompt}], stream:true };
 
+  /* Qwen thinking models served by llama.cpp can stream reasoning tokens for a
+     long time before their first visible token. Page Factory never displays
+     private reasoning, so ask llama.cpp to go straight to the useful output.
+     Keep this llama.cpp-specific: other OpenAI-compatible endpoints may reject
+     unknown request fields. */
+  if(p === "llamacpp") body.chat_template_kwargs = { enable_thinking:false };
+
   controller = new AbortController();
   const res = await fetch(base() + (isAnthropic ? "/messages" : "/chat/completions"), {
     method:"POST", headers:headersFor(), body:JSON.stringify(body), signal:controller.signal
   });
   if(!res.ok) throw new Error("HTTP " + res.status + " — " + (await res.text()).slice(0,300));
 
+  if(!res.body) throw new Error("The endpoint returned no response body.");
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "", out = "";
+
+  function consumeEvent(event){
+    const payload = event.split(/\r?\n/)
+      .filter(line => line.startsWith("data:"))
+      .map(line => line.slice(5).trimStart())
+      .join("\n").trim();
+    if(!payload || payload === "[DONE]") return;
+
+    let j;
+    try{ j = JSON.parse(payload); }catch(e){ return; }
+    let piece = "";
+    if(isAnthropic){
+      if(j.type === "content_block_delta" && j.delta && j.delta.text) piece = j.delta.text;
+      if(j.type === "error") throw new Error(j.error && j.error.message || "stream error");
+    } else {
+      const d = j.choices && j.choices[0];
+      if(j.error) throw new Error(j.error.message || "stream error");
+      piece = (d && d.delta && d.delta.content) || (d && d.text) || "";
+    }
+    if(piece){ out += piece; onChunk(piece, out); }
+  }
+
+  function consumeAvailableEvents(final){
+    const events = buf.split(/\r?\n\r?\n/);
+    const tail = events.pop();
+    buf = final ? "" : tail;
+    events.forEach(consumeEvent);
+    if(final && tail.trim()) consumeEvent(tail);
+  }
+
   while(true){
     const { done, value } = await reader.read();
     if(done) break;
     buf += dec.decode(value, {stream:true});
-    const parts = buf.split("\n\n");
-    buf = parts.pop();
-    for(const part of parts){
-      for(const line of part.split("\n")){
-        if(!line.startsWith("data:")) continue;
-        const payload = line.slice(5).trim();
-        if(!payload || payload === "[DONE]") continue;
-        let j; try{ j = JSON.parse(payload); }catch(e){ continue; }
-        let piece = "";
-        if(isAnthropic){
-          if(j.type === "content_block_delta" && j.delta && j.delta.text) piece = j.delta.text;
-          if(j.type === "error") throw new Error(j.error && j.error.message || "stream error");
-        } else {
-          const d = j.choices && j.choices[0];
-          piece = (d && d.delta && d.delta.content) || (d && d.text) || "";
-        }
-        if(piece){ out += piece; onChunk(piece, out); }
-      }
-    }
+    consumeAvailableEvents(false);
   }
+  buf += dec.decode();
+  consumeAvailableEvents(true);
   return out;
 }
 
@@ -1083,12 +1111,12 @@ function briefBlock(){
 
 /* ---------- code extraction ---------- */
 function extractHtml(text){
-  const fence = text.match(/```(?:html|HTML)?\s*\n([\s\S]*?)```/);
-  let code = fence ? fence[1] : text;
-  if(!/<!DOCTYPE|<html/i.test(code)){
-    const i = text.search(/<!DOCTYPE html|<html/i);
-    if(i >= 0){ code = text.slice(i); const end = code.lastIndexOf("</html>"); if(end > 0) code = code.slice(0, end+7); }
-  }
+  let code = String(text || "").replace(/^\s*```[^\r\n]*\r?\n?/, "");
+  code = code.replace(/\r?\n?```\s*$/, "");
+  const start = code.search(/<!doctype\s+html\b|<html\b/i);
+  if(start >= 0) code = code.slice(start);
+  const end = code.search(/<\/html\s*>/i);
+  if(end >= 0) code = code.slice(0, end + code.slice(end).match(/^<\/html\s*>/i)[0].length);
   return code.trim();
 }
 
@@ -1113,11 +1141,19 @@ async function runStage1(){
   setBusy(true); startClock(); setStatus("stage 1 — writing brief", "live");
   $("briefOut").value = ""; show("brief");
   try{
-    await stream($("p1").value, briefBlock(), (_p, all) => {
-      $("briefOut").value = all;
-      $("chars").textContent = all.length;
+    let frame = 0, latest = "";
+    const paint = () => {
+      frame = 0;
+      $("briefOut").value = latest;
+      $("chars").textContent = latest.length;
       $("briefOut").scrollTop = $("briefOut").scrollHeight;
+    };
+    await stream($("p1").value, briefBlock(), (_p, all) => {
+      latest = all;
+      if(!frame) frame = requestAnimationFrame(paint);
     });
+    if(frame) cancelAnimationFrame(frame);
+    paint();
     const m = $("briefOut").value.match(/(?:^|\n)\s*(?:STYLE|Selected style|CHOSEN STYLE)[^\n]*/i);
     $("styleReadout").textContent = m ? "· " + m[0].trim().slice(0,60) : "";
     setStatus("brief ready — edit it, then build", "");
@@ -1136,11 +1172,22 @@ async function runStage2(){
   setBusy(true); startClock(); setStatus("stage 2 — building page", "live");
   pageCode = ""; $("codeOut").textContent = ""; show("code");
   try{
-    const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
-      $("codeOut").textContent = all;
-      $("chars").textContent = all.length;
+    let frame = 0, latest = "";
+    const paint = () => {
+      frame = 0;
+      const code = extractHtml(latest);
+      $("codeOut").textContent = code;
+      $("chars").textContent = code.length;
       $("codeOut").scrollTop = $("codeOut").scrollHeight;
+      syncToolbar();
+    };
+    const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
+      latest = all;
+      if(!frame) frame = requestAnimationFrame(paint);
     });
+    if(frame) cancelAnimationFrame(frame);
+    latest = raw;
+    paint();
     pageCode = extractHtml(raw);
     $("codeOut").textContent = pageCode;
     if(!/<\/html>/i.test(pageCode)) setStatus("built — output looks truncated, raise max tokens", "err");
