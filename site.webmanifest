@@ -1,0 +1,17 @@
+{
+  "name": "Page Factory",
+  "short_name": "Page Factory",
+  "description": "Turn a brief into a complete single-file landing page.",
+  "start_url": "/page-factory/",
+  "display": "standalone",
+  "background_color": "#0B1620",
+  "theme_color": "#0B1620",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
