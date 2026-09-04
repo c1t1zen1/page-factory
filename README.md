@@ -88,19 +88,19 @@ python3 -m http.server 4000
 
 ## Endpoints it works with
 
-Page Factory speaks the two most common AI API formats, so it works with almost anything:
+The **API Provider** dropdown has one entry per runtime. Pick yours and the base URL fills itself in:
 
-| Runtime | Base URL | Key needed? |
+| Provider option | Base URL it sets | Key needed? |
 |---|---|---|
-| llama.cpp `llama-server` | `http://localhost:8080/v1` | No |
-| Ollama | `http://localhost:11434/v1` | No |
-| LM Studio | `http://localhost:1234/v1` | No |
-| vLLM | `http://localhost:8000/v1` | No |
-| OpenAI | `https://api.openai.com/v1` | Yes |
-| OpenRouter | `https://openrouter.ai/api/v1` | Yes |
-| Anthropic | `https://api.anthropic.com/v1` | Yes (switch format to "Anthropic") |
+| `llama.cpp (llama-server)` | `http://localhost:8080/v1` | No |
+| `Ollama` | `http://localhost:11434/v1` | No |
+| `LM Studio` | `http://localhost:1234/v1` | No |
+| `OpenAI` | `https://api.openai.com/v1` | Yes |
+| `Anthropic` | `https://api.anthropic.com/v1` | Yes |
+| `OpenRouter` | `https://openrouter.ai/api/v1` | Yes |
+| `Custom (OpenAI-compatible)` | whatever you type — vLLM, Groq, Mistral, DeepSeek and friends live here | Only if the server asks |
 
-Hit **Fetch** in the tool to see exactly which models your chosen endpoint offers.
+Hit **Fetch** and the Model dropdown rebuilds itself from what that endpoint actually serves — the old list is cleared first, every time, so nothing from the previous provider is left behind. Switching provider does the same refresh on its own, and **Custom / Enter manually…** at the bottom of the list covers any model the endpoint doesn't advertise.
 
 ## Two snags newcomers hit (and the fix)
 

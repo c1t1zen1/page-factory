@@ -39,6 +39,8 @@
 html,body{ height:100%; }
 body{
   margin:0;
+  display:flex; flex-direction:column;
+  height:100dvh; overflow:hidden;
   background:var(--ink);
   color:var(--paper);
   font-family:var(--sans);
@@ -75,21 +77,35 @@ button{ font:inherit; color:inherit; }
 .masthead a{ color:var(--cyan); font-size:12px; text-decoration:none; border-bottom:1px solid transparent; }
 .masthead a:hover{ border-bottom-color:var(--cyan); }
 
+/* App frame: the body owns the viewport height and the shell takes exactly
+   what the masthead leaves, so nothing below has to guess a pixel height. */
 .shell{
   display:grid;
   grid-template-columns:var(--rail) minmax(0,1fr);
   gap:0;
-  align-items:start;
-  min-height:calc(100dvh - 53px);
+  align-items:stretch;
+  flex:1 1 auto;
+  min-height:0;
 }
 .rail{
   border-right:1px solid var(--line);
   background:color-mix(in srgb, var(--ink) 92%, black);
   padding:0 0 120px;
-  max-height:calc(100dvh - 53px);
+  height:100%;
+  max-height:100%;
+  min-height:0;
   overflow-y:auto;
 }
-.stage{ padding:0; min-width:0; display:flex; flex-direction:column; max-height:calc(100dvh - 53px); }
+.stage{
+  padding:0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  max-height:100%;
+  min-height:0;
+  overflow:hidden;
+}
 
 /* ============================================================
    PANELS — drawing-sheet labels sitting in the rule
@@ -207,26 +223,40 @@ select{ appearance:none; background-image:linear-gradient(45deg,transparent 50%,
 .dot.err{ background:var(--alert); }
 @keyframes pulse{ 50%{ opacity:.25; } }
 
-.viewport{ flex:1 1 auto; overflow:auto; min-height:0; position:relative; }
-.pane{ display:none; height:100%; }
-.pane.on{ display:block; }
+/* Every pane is sized by flex, never by height:100% — a percentage height
+   against an indefinite parent silently collapses to intrinsic size. */
+.viewport{ flex:1 1 auto; overflow:hidden; min-height:0; position:relative; display:flex; flex-direction:column; }
+.pane{ display:none; width:100%; min-width:0; min-height:0; flex-direction:column; }
+.pane.on{ display:flex; flex:1 1 auto; min-height:0; }
+#paneEmpty{ overflow-y:auto; display:none; }
+#paneEmpty.on{ display:block; flex:1 1 auto; min-height:0; overflow-y:auto; }
 
 pre.code{
   margin:0; padding:20px;
   font-family:var(--mono); font-size:12.5px; line-height:1.65;
   white-space:pre-wrap; word-break:break-word;
-  color:#D6E4EE; min-height:100%;
+  color:#D6E4EE; width:100%;
+  flex:1 1 auto; min-height:0; overflow-y:auto; box-sizing:border-box;
 }
 pre.code.brief{ white-space:pre-wrap; color:#DFE7EC; font-family:var(--sans); font-size:14px; line-height:1.62; max-width:78ch; }
 pre.code.brief strong{ color:var(--signal); }
 
 textarea.editable{
-  width:100%; height:100%; min-height:400px; border:0; padding:20px;
-  background:transparent; font-family:var(--sans); font-size:14px; line-height:1.62; resize:none;
+  width:100%; min-height:0; flex:1 1 auto; border:0; padding:20px;
+  background:transparent; color:#DFE7EC; font-family:var(--sans); font-size:14px; line-height:1.62; resize:none;
+  box-sizing:border-box; overflow-y:auto;
 }
 textarea.editable:focus{ outline:none; }
 
-iframe.preview{ width:100%; height:100%; border:0; background:#fff; display:block; }
+iframe.preview{ width:100%; min-height:0; flex:1 1 auto; border:0; background:#fff; display:block; }
+iframe.preview[hidden]{ display:none; }
+.preview-empty{
+  flex:1 1 auto; min-height:0; display:grid; place-content:center; gap:8px;
+  padding:32px; text-align:center; color:var(--mute); font-size:13px;
+}
+.preview-empty[hidden]{ display:none; }
+.preview-empty strong{ font-family:var(--display); font-size:18px; color:var(--paper-2); }
+.preview-empty code{ font-family:var(--mono); font-size:11.5px; background:var(--ink-2); padding:1px 5px; color:var(--cyan); }
 
 .empty{
   padding:64px 32px; max-width:60ch; color:var(--mute);
@@ -258,11 +288,12 @@ iframe.preview{ width:100%; height:100%; border:0; background:#fff; display:bloc
    RESPONSIVE
    ============================================================ */
 @media (max-width:900px){
-  .shell{ grid-template-columns:1fr; }
-  .rail{ max-height:none; border-right:0; border-bottom:1px solid var(--line); padding-bottom:0; }
-  .stage{ max-height:none; min-height:70dvh; }
+  body{ height:auto; min-height:100dvh; overflow-x:hidden; overflow-y:auto; background-size:32px 32px; }
+  .shell{ grid-template-columns:1fr; flex:none; min-height:auto; }
+  .rail{ max-height:none; height:auto; min-height:0; border-right:0; border-bottom:1px solid var(--line); padding-bottom:0; }
+  /* Keep a definite height here too — the panes flex against it. */
+  .stage{ max-height:none; height:calc(100dvh - 56px); min-height:460px; }
   .runbar{ position:sticky; bottom:0; }
-  body{ background-size:32px 32px; }
 }
 @media (max-width:420px){
   .row{ grid-template-columns:1fr; }
@@ -290,24 +321,31 @@ iframe.preview{ width:100%; height:100%; border:0; background:#fff; display:bloc
   <details class="panel" open>
     <summary>01 · MODEL</summary>
     <div class="panel-body">
-      <label for="provider">API format</label>
+      <label for="provider">API Provider</label>
       <select id="provider">
-        <option value="openai">OpenAI-compatible (llama.cpp, LM Studio, Ollama, vLLM, OpenAI, OpenRouter, Groq…)</option>
-        <option value="anthropic">Anthropic Messages</option>
+        <option value="llamacpp">llama.cpp (llama-server)</option>
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
+        <option value="ollama">Ollama</option>
+        <option value="lmstudio">LM Studio</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
       </select>
 
       <label for="baseUrl">Base URL <span class="hint">— include /v1</span></label>
       <input type="text" id="baseUrl" placeholder="http://localhost:8080/v1" spellcheck="false">
 
-      <label for="apiKey">API key <span class="hint">— leave blank for local servers</span></label>
-      <input type="password" id="apiKey" placeholder="sk-…" spellcheck="false" autocomplete="off">
+      <label for="apiKey">API key <span class="hint" id="apiKeyHint">— leave blank for local server</span></label>
+      <input type="password" id="apiKey" placeholder="optional" spellcheck="false" autocomplete="off">
 
       <label for="model">Model</label>
       <div class="url-row">
-        <input type="text" id="model" placeholder="model name" spellcheck="false" list="modelList">
-        <button class="inline-btn" id="fetchModels">Fetch</button>
+        <select id="model"></select>
+        <button class="inline-btn" id="fetchModels" type="button">Fetch</button>
       </div>
-      <datalist id="modelList"></datalist>
+      <div id="customModelBox" style="display:none;margin-top:6px;">
+        <input type="text" id="customModel" placeholder="Type custom model name…" spellcheck="false">
+      </div>
 
       <div class="row">
         <div>
@@ -446,7 +484,13 @@ iframe.preview{ width:100%; height:100%; border:0; background:#fff; display:bloc
     </div>
     <div class="pane" id="paneBrief"><textarea class="editable" id="briefOut" spellcheck="false" placeholder="Stage 1 output lands here — and stays editable."></textarea></div>
     <div class="pane" id="paneCode"><pre class="code" id="codeOut"></pre></div>
-    <div class="pane" id="panePrev"><iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-popups allow-forms allow-modals"></iframe></div>
+    <div class="pane" id="panePrev">
+      <div class="preview-empty" id="previewEmpty">
+        <strong>No preview yet</strong>
+        <span>Run <code>Stage 2</code> (or <code>Run both stages</code>) and the finished page renders here.</span>
+      </div>
+      <iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals" hidden></iframe>
+    </div>
   </div>
 </div>
 </div>
@@ -563,38 +607,193 @@ const store = {
 const STYLES = ["Neobrutalist","Swiss/International","Editorial","Glassmorphism","Retro-futuristic","Bauhaus","Art Deco","Minimal","Flat","Material","Neumorphic","Monochromatic","Scandinavian","Japandi","Dark Mode First","Modernist","Organic/Fluid","Corporate Professional","Tech Forward","Luxury Minimal","Neo-Geo","Kinetic","Gradient Modern","Typography First","Metropolitan","Constructivist","Brutalist-Archival","Cinematic/Letterbox","Risograph","Technical-Schematic","Catalogue/Index","Nouvelle Vague poster","Warm Analog"];
 STYLES.forEach(s => { const o = document.createElement("option"); o.value = o.textContent = s; $("styleLock").appendChild(o); });
 
-/* ---------- defaults ---------- */
+/* ---------- defaults & providers ---------- */
 const DEFAULT_P1 = $("src-p1").textContent.trim();
 const DEFAULT_P2 = $("src-p2").textContent.trim();
-const BASES = { openai:"http://localhost:8080/v1", anthropic:"https://api.anthropic.com/v1" };
 
-const FIELDS = ["provider","baseUrl","model","temp","maxTokens","quickText","refUrl","styleLock",
+const PROVIDERS = {
+  llamacpp: {
+    label: "llama.cpp (llama-server)",
+    base: "http://localhost:8080/v1",
+    format: "openai",
+    models: [],
+    keyHint: "— leave blank for local server",
+    keyPlaceholder: "optional"
+  },
+  openai: {
+    label: "OpenAI",
+    base: "https://api.openai.com/v1",
+    format: "openai",
+    models: ["gpt-4o", "gpt-4o-mini", "o3-mini", "o1", "gpt-4-turbo"],
+    keyHint: "— sk-…",
+    keyPlaceholder: "sk-…"
+  },
+  anthropic: {
+    label: "Anthropic",
+    base: "https://api.anthropic.com/v1",
+    format: "anthropic",
+    models: ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+    keyHint: "— sk-ant-…",
+    keyPlaceholder: "sk-ant-…"
+  },
+  ollama: {
+    label: "Ollama",
+    base: "http://localhost:11434/v1",
+    format: "openai",
+    models: [],
+    keyHint: "— leave blank for local server",
+    keyPlaceholder: "optional"
+  },
+  lmstudio: {
+    label: "LM Studio",
+    base: "http://localhost:1234/v1",
+    format: "openai",
+    models: [],
+    keyHint: "— leave blank for local server",
+    keyPlaceholder: "optional"
+  },
+  openrouter: {
+    label: "OpenRouter",
+    base: "https://openrouter.ai/api/v1",
+    format: "openai",
+    models: ["anthropic/claude-3.7-sonnet", "openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat", "google/gemini-2.0-flash-001"],
+    keyHint: "— sk-or-…",
+    keyPlaceholder: "sk-or-…"
+  },
+  custom: {
+    label: "Custom (OpenAI-compatible)",
+    base: "http://localhost:8080/v1",
+    format: "openai",
+    models: [],
+    keyHint: "— if required",
+    keyPlaceholder: "api key"
+  }
+};
+
+const FIELDS = ["provider","baseUrl","temp","maxTokens","quickText","refUrl","styleLock",
   "f_client","f_what","f_job","f_audience","f_proof","f_cta1","f_cta2","f_include","f_avoid","f_tone","f_constraints","p1","p2"];
+
+function currentModel(){
+  const v = $("model").value;
+  if(v === "__custom__") return $("customModel").value.trim();
+  return v.trim();
+}
+
+/* One writer for the model dropdown. Provider switches and Fetch both go
+   through it, so options from a previous provider or a previous fetch can
+   never survive into the new list. */
+const LOCAL_BASE = /:\/\/(localhost|127\.0\.0\.1|\[::1\])/i;
+
+function setModelOptions(models, selected){
+  const sel = $("model");
+  const list = Array.from(new Set((models || []).filter(Boolean).map(String)));
+  const add = (value, label) => {
+    const o = document.createElement("option");
+    o.value = value; o.textContent = label;
+    sel.appendChild(o);
+    return o;
+  };
+
+  sel.innerHTML = "";
+  $("customModel").value = "";
+  $("customModelBox").style.display = "none";
+
+  if(!list.length) add("", "(No models loaded — press Fetch, or pick Custom)");
+  list.forEach(m => add(m, m));
+  const customOpt = add("__custom__", "Custom / Enter manually…");
+
+  if(selected && selected !== "__custom__" && list.indexOf(selected) === -1){
+    sel.insertBefore(add(selected, selected), customOpt);
+    sel.value = selected;
+  } else if(selected){
+    sel.value = selected;
+  } else {
+    sel.value = list.length ? list[0] : "";
+  }
+  $("customModelBox").style.display = sel.value === "__custom__" ? "block" : "none";
+  return sel.value;
+}
+
+function populateModelsForProvider(provKey, selectedModel = ""){
+  const cfg = PROVIDERS[provKey] || PROVIDERS.custom;
+  return setModelOptions(cfg.models || [], selectedModel);
+}
+
+function onProviderChange(){
+  const p = $("provider").value;
+  const cfg = PROVIDERS[p] || PROVIDERS.custom;
+
+  store.del("pf:model");
+  store.del("pf:customModel");
+  populateModelsForProvider(p, "");   // full wipe of the previous provider's list
+
+  const cur = $("baseUrl").value.trim();
+  const knownBases = Object.values(PROVIDERS).map(x => x.base);
+  if(!cur || knownBases.includes(cur)) $("baseUrl").value = cfg.base;
+
+  const hint = $("apiKeyHint");
+  if(hint) hint.textContent = cfg.keyHint;
+  $("apiKey").placeholder = cfg.keyPlaceholder;
+
+  saveSettings();
+  fetchModels({ quiet:true });        // refresh the list against the new endpoint
+}
+$("provider").addEventListener("change", onProviderChange);
+
+$("model").addEventListener("change", () => {
+  const isCustom = $("model").value === "__custom__";
+  $("customModelBox").style.display = isCustom ? "block" : "none";
+  if(isCustom) $("customModel").focus();
+  saveSettings();
+});
+$("customModel").addEventListener("input", saveSettings);
 
 function loadSettings(){
   FIELDS.forEach(k => { const v = store.get("pf:"+k); if(v !== null && $(k)) $(k).value = v; });
+
+  let p = $("provider").value;
+  if(!PROVIDERS[p]){
+    p = "llamacpp";
+    $("provider").value = p;
+  }
+  const cfg = PROVIDERS[p] || PROVIDERS.custom;
+  if(!$("baseUrl").value) $("baseUrl").value = cfg.base;
+  const hint = $("apiKeyHint");
+  if(hint) hint.textContent = cfg.keyHint;
+  $("apiKey").placeholder = cfg.keyPlaceholder;
+
+  const savedModel = store.get("pf:model") || "";
+  const savedCustom = store.get("pf:customModel") || "";
+  populateModelsForProvider(p, savedModel);
+  if(savedCustom){
+    $("customModel").value = savedCustom;
+  }
+  if($("model").value === "__custom__"){
+    $("customModelBox").style.display = "block";
+  }
+
   if(!$("p1").value) $("p1").value = DEFAULT_P1;
   if(!$("p2").value) $("p2").value = DEFAULT_P2;
-  if(!$("baseUrl").value) $("baseUrl").value = BASES[$("provider").value];
+
   const rk = store.get("pf:rememberKey") === "1";
   $("rememberKey").checked = rk;
   if(rk) $("apiKey").value = store.get("pf:apiKey") || "";
   if(store.get("pf:mode") === "full") setMode("full");
+
+  // A local server is free to ask and usually has the list ready.
+  if(LOCAL_BASE.test(base())) fetchModels({ quiet:true });
 }
+
 function saveSettings(){
   FIELDS.forEach(k => { if($(k)) store.set("pf:"+k, $(k).value); });
+  store.set("pf:model", currentModel());
+  store.set("pf:customModel", $("customModel").value);
   store.set("pf:rememberKey", $("rememberKey").checked ? "1" : "0");
   if($("rememberKey").checked) store.set("pf:apiKey", $("apiKey").value); else store.del("pf:apiKey");
 }
 document.addEventListener("input", saveSettings);
 document.addEventListener("change", saveSettings);
 
-$("provider").addEventListener("change", () => {
-  const p = $("provider").value;
-  const cur = $("baseUrl").value.trim();
-  if(!cur || Object.values(BASES).includes(cur)) $("baseUrl").value = BASES[p];
-  saveSettings();
-});
 $("resetPrompts").addEventListener("click", () => {
   $("p1").value = DEFAULT_P1; $("p2").value = DEFAULT_P2; saveSettings(); toast("prompts reset");
 });
@@ -615,20 +814,32 @@ const PANES = { empty:"paneEmpty", brief:"paneBrief", code:"paneCode", prev:"pan
 let tab = "empty";
 function show(which){
   tab = which;
+  if(which === "prev") renderPreview();
   Object.entries(PANES).forEach(([k,id]) => $(id).classList.toggle("on", k === which));
   [["brief","tabBrief"],["code","tabCode"],["prev","tabPrev"]].forEach(([k,id]) =>
     $(id).setAttribute("aria-selected", String(k === which)));
   syncToolbar();
 }
+
+function openPreview(){
+  if(!pageCode && $("codeOut").textContent.trim()){
+    pageCode = extractHtml($("codeOut").textContent);
+  }
+  if(tab === "prev") previewSig = null;   // pressing Preview again reloads the frame
+  renderPreview();
+  show("prev");
+}
+
 $("tabBrief").addEventListener("click", () => show("brief"));
 $("tabCode").addEventListener("click", () => show("code"));
-$("tabPrev").addEventListener("click", () => { renderPreview(); show("prev"); });
+$("tabPrev").addEventListener("click", openPreview);
 
 /* ---------- toolbar ---------- */
 let pageCode = "";
+let previewSig = null;
 function syncToolbar(){
   const hasBrief = $("briefOut").value.trim().length > 0;
-  const hasCode = pageCode.trim().length > 0;
+  const hasCode = pageCode.trim().length > 0 || $("codeOut").textContent.trim().length > 0;
   const copyable = (tab === "brief" && hasBrief) || ((tab === "code" || tab === "prev") && hasCode);
   $("btnCopy").disabled = !copyable;
   $("btnPrev").disabled = !hasCode;
@@ -638,7 +849,7 @@ function syncToolbar(){
 $("briefOut").addEventListener("input", syncToolbar);
 
 $("btnCopy").addEventListener("click", async () => {
-  const text = tab === "brief" ? $("briefOut").value : pageCode;
+  const text = tab === "brief" ? $("briefOut").value : (pageCode || $("codeOut").textContent);
   try{ await navigator.clipboard.writeText(text); toast("copied"); }
   catch(e){
     const ta = document.createElement("textarea");
@@ -646,15 +857,16 @@ $("btnCopy").addEventListener("click", async () => {
     document.execCommand("copy"); ta.remove(); toast("copied");
   }
 });
-$("btnPrev").addEventListener("click", () => { renderPreview(); show("prev"); });
+$("btnPrev").addEventListener("click", openPreview);
 $("btnTab").addEventListener("click", () => {
-  const url = URL.createObjectURL(new Blob([pageCode], {type:"text/html"}));
+  const codeToOpen = pageCode || $("codeOut").textContent;
+  const url = URL.createObjectURL(new Blob([codeToOpen], {type:"text/html"}));
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 });
 $("btnDl").addEventListener("click", () => {
   const isBrief = tab === "brief";
-  const body = isBrief ? $("briefOut").value : pageCode;
+  const body = isBrief ? $("briefOut").value : (pageCode || $("codeOut").textContent);
   const name = isBrief ? "design-brief.md" : "index.html";
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([body], {type: isBrief ? "text/markdown" : "text/html"}));
@@ -662,7 +874,35 @@ $("btnDl").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   toast("saved " + name);
 });
-function renderPreview(){ $("frame").srcdoc = pageCode; }
+
+/* The Preview frame is driven by srcdoc alone. The old empty-state fallback
+   pointed the iframe's src at "about:blank", leaving a second competing source
+   on the element; paired with a frame that had no height of its own it showed
+   up as a blank strip. srcdoc only, plus the hidden empty state, is
+   deterministic. Re-rendering is skipped when the code has not changed. */
+function renderPreview(){
+  const frame = $("frame");
+  if(!pageCode && $("codeOut").textContent.trim()){
+    pageCode = extractHtml($("codeOut").textContent);
+  }
+  const code = pageCode.trim();
+  const empty = $("previewEmpty");
+  if(empty) empty.hidden = !!code;
+  if(frame.hasAttribute("src")) frame.removeAttribute("src");
+
+  if(!code){
+    if(frame.hasAttribute("srcdoc")) frame.removeAttribute("srcdoc");
+    frame.hidden = true;
+    previewSig = null;
+    return;
+  }
+  frame.hidden = false;
+  if(previewSig !== code){
+    frame.removeAttribute("srcdoc");
+    frame.srcdoc = code;
+    previewSig = code;
+  }
+}
 
 /* ---------- status readout ---------- */
 let t0 = 0, timer = null;
@@ -692,8 +932,10 @@ function notice(html){
 let controller = null;
 
 function headersFor(){
+  const p = $("provider").value;
+  const cfg = PROVIDERS[p] || PROVIDERS.custom;
   const key = $("apiKey").value.trim();
-  if($("provider").value === "anthropic"){
+  if(cfg.format === "anthropic"){
     const h = { "content-type":"application/json", "anthropic-version":"2023-06-01",
                 "anthropic-dangerous-direct-browser-access":"true" };
     if(key) h["x-api-key"] = key;
@@ -705,22 +947,48 @@ function headersFor(){
 }
 function base(){ return $("baseUrl").value.trim().replace(/\/+$/,""); }
 
-async function fetchModels(){
+let modelsReq = null;
+async function fetchModels(opts = {}){
+  const quiet = !!opts.quiet;
   const btn = $("fetchModels");
-  btn.disabled = true; btn.textContent = "…";
+  const sel = $("model");
+  const cfg = PROVIDERS[$("provider").value] || PROVIDERS.custom;
+
+  /* Wipe the list, the custom box and the stored pick *before* asking, so a
+     slow or failed request can never leave the previous endpoint's models on
+     screen. The dropdown is rebuilt from the response alone. */
+  const previous = currentModel();
+  const previousCustom = $("customModel").value;
+  setModelOptions([], "");
+  sel.options[0].textContent = "Fetching models…";
+  sel.disabled = true; btn.disabled = true; btn.textContent = "…";
+  document.querySelectorAll(".notice").forEach(n => n.remove());
+
+  if(modelsReq) modelsReq.abort();
+  const ctl = modelsReq = new AbortController();
   try{
-    const r = await fetch(base() + "/models", { headers: headersFor() });
+    const r = await fetch(base() + "/models", { headers: headersFor(), signal:ctl.signal });
     if(!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0,200));
     const j = await r.json();
-    const ids = (j.data || j.models || []).map(m => m.id || m.name).filter(Boolean).sort();
-    const dl = $("modelList"); dl.innerHTML = "";
-    ids.forEach(id => { const o = document.createElement("option"); o.value = id; dl.appendChild(o); });
-    if(ids.length && !$("model").value) $("model").value = ids[0];
-    toast(ids.length + " models");
-  }catch(e){ explain(e); }
-  finally{ btn.disabled = false; btn.textContent = "Fetch"; }
+    const ids = (j.data || j.models || []).map(m => m && (m.id || m.name)).filter(Boolean).sort();
+    // Keep the pick only when the endpoint really still offers it.
+    setModelOptions(ids, (previous && previous !== "__custom__" && ids.indexOf(previous) > -1) ? previous : "");
+    if(!quiet) toast(ids.length ? ids.length + " models loaded" : "Endpoint returned no models");
+  }catch(e){
+    if(e && e.name === "AbortError") return;
+    // Nothing came back: put the provider's own list plus the user's pick back.
+    setModelOptions(cfg.models || [], previous);
+    if(previous === "__custom__") $("customModel").value = previousCustom;
+    if(quiet){ if(!busy) setStatus("model list unavailable — pick one or press Fetch", ""); }
+    else explain(e);
+  }finally{
+    if(modelsReq === ctl) modelsReq = null;
+    sel.disabled = false;
+    btn.disabled = false; btn.textContent = "Fetch";
+    saveSettings();
+  }
 }
-$("fetchModels").addEventListener("click", fetchModels);
+$("fetchModels").addEventListener("click", () => fetchModels());
 
 function explain(e){
   const m = String(e && e.message || e);
@@ -736,11 +1004,14 @@ function explain(e){
 }
 
 async function stream(systemPrompt, userPrompt, onChunk){
-  const isAnthropic = $("provider").value === "anthropic";
+  const p = $("provider").value;
+  const cfg = PROVIDERS[p] || PROVIDERS.custom;
+  const isAnthropic = cfg.format === "anthropic";
+  const activeModel = currentModel();
   const body = isAnthropic
-    ? { model:$("model").value.trim(), max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+    ? { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
         system:systemPrompt, messages:[{role:"user", content:userPrompt}], stream:true }
-    : { model:$("model").value.trim(), max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
+    : { model:activeModel, max_tokens:+$("maxTokens").value, temperature:+$("temp").value,
         messages:[{role:"system", content:systemPrompt},{role:"user", content:userPrompt}], stream:true };
 
   controller = new AbortController();
@@ -832,7 +1103,7 @@ $("stop").addEventListener("click", () => { if(controller) controller.abort(); }
 
 function preflight(){
   document.querySelectorAll(".notice").forEach(n => n.remove());
-  if(!$("model").value.trim()){ notice("<b>No model set.</b> Type a model name, or press Fetch to list what the endpoint offers."); return false; }
+  if(!currentModel()){ notice("<b>No model set.</b> Select a model from the dropdown, type a model name, or press Fetch to list what the endpoint offers."); return false; }
   if(!base()){ notice("<b>No base URL.</b>"); return false; }
   return true;
 }
@@ -868,16 +1139,18 @@ async function runStage2(){
     const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
       $("codeOut").textContent = all;
       $("chars").textContent = all.length;
-      $("codeOut").parentElement.scrollTop = $("codeOut").parentElement.scrollHeight;
+      $("codeOut").scrollTop = $("codeOut").scrollHeight;
     });
     pageCode = extractHtml(raw);
     $("codeOut").textContent = pageCode;
     if(!/<\/html>/i.test(pageCode)) setStatus("built — output looks truncated, raise max tokens", "err");
     else setStatus("page ready", "");
-    syncToolbar(); renderPreview();
+    syncToolbar();
+    renderPreview();
+    show("prev");
     return true;
   }catch(e){
-    if(e.name === "AbortError"){ setStatus("stopped", ""); pageCode = extractHtml($("codeOut").textContent); syncToolbar(); }
+    if(e.name === "AbortError"){ setStatus("stopped", ""); pageCode = extractHtml($("codeOut").textContent); syncToolbar(); renderPreview(); }
     else explain(e);
     return false;
   }finally{ setBusy(false); stopClock(); }
