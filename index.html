@@ -1045,7 +1045,7 @@ function headersFor(){
     if(key) h["x-api-key"] = key;
     return h;
   }
-  const h = { "content-type":"application/json" };
+  const h = { "content-type":"application/json", "accept":"text/event-stream" };
   if(key) h["authorization"] = "Bearer " + key;
   return h;
 }
@@ -1144,7 +1144,27 @@ function escapeHtml(text){
   })[c]);
 }
 
-async function stream(systemPrompt, userPrompt, onChunk){
+function streamText(value){
+  if(typeof value === "string") return value;
+  if(!Array.isArray(value)) return "";
+  return value.map(part => {
+    if(typeof part === "string") return part;
+    if(!part || typeof part !== "object") return "";
+    return part.text || part.content || "";
+  }).join("");
+}
+
+function openAiStreamPieces(chunk){
+  const choice = chunk && chunk.choices && chunk.choices[0];
+  const delta = choice && (choice.delta || choice.message);
+  const reasoningDetails = delta && Array.isArray(delta.reasoning_details) ? delta.reasoning_details : [];
+  const text = streamText(delta && delta.content) || streamText(delta && delta.text) || streamText(choice && choice.text) || streamText(chunk && chunk.output_text);
+  const reasoning = streamText(delta && delta.reasoning) || streamText(delta && delta.reasoning_content) ||
+    streamText(reasoningDetails.map(detail => detail && (detail.text || detail.summary)));
+  return { text, reasoning };
+}
+
+async function stream(systemPrompt, userPrompt, onChunk, onReasoning){
   const p = $("provider").value;
   const cfg = PROVIDERS[p] || PROVIDERS.custom;
   const isAnthropic = cfg.format === "anthropic";
@@ -1210,11 +1230,8 @@ async function stream(systemPrompt, userPrompt, onChunk){
   const dec = new TextDecoder();
   let buf = "", out = "";
 
-  function consumeEvent(event){
-    const payload = event.split(/\r?\n/)
-      .filter(line => line.startsWith("data:"))
-      .map(line => line.slice(5).trimStart())
-      .join("\n").trim();
+  function consumePayload(payload){
+    payload = payload.trim();
     if(!payload || payload === "[DONE]") return;
 
     let j;
@@ -1224,11 +1241,20 @@ async function stream(systemPrompt, userPrompt, onChunk){
       if(j.type === "content_block_delta" && j.delta && j.delta.text) piece = j.delta.text;
       if(j.type === "error") throw new Error(j.error && j.error.message || "stream error");
     } else {
-      const d = j.choices && j.choices[0];
       if(j.error) throw new Error(j.error.message || "stream error");
-      piece = (d && d.delta && d.delta.content) || (d && d.text) || "";
+      const parts = openAiStreamPieces(j);
+      piece = parts.text;
+      if(!piece && parts.reasoning && onReasoning) onReasoning(parts.reasoning);
     }
     if(piece){ out += piece; onChunk(piece, out); }
+  }
+
+  function consumeEvent(event){
+    const payload = event.split(/\r?\n/)
+      .filter(line => /^data:/.test(line))
+      .map(line => line.slice(5).replace(/^ /, ""))
+      .join("\n");
+    if(payload) consumePayload(payload);
   }
 
   function consumeAvailableEvents(final){
@@ -1236,7 +1262,10 @@ async function stream(systemPrompt, userPrompt, onChunk){
     const tail = events.pop();
     buf = final ? "" : tail;
     events.forEach(consumeEvent);
-    if(final && tail.trim()) consumeEvent(tail);
+    if(final && tail.trim()){
+      if(/^data:|^:|^event:/m.test(tail)) consumeEvent(tail);
+      else consumePayload(tail); // compatible proxies sometimes return one JSON object without SSE framing
+    }
   }
 
   while(true){
@@ -1322,8 +1351,9 @@ async function runStage1(){
     };
     await stream($("p1").value, briefBlock(), (_p, all) => {
       latest = all;
+      setStatus("stage 1 — writing brief", "live");
       if(!frame) frame = requestAnimationFrame(paint);
-    });
+    }, () => setStatus("stage 1 — reasoning", "live"));
     if(frame) cancelAnimationFrame(frame);
     paint();
     const m = $("briefOut").value.match(/(?:^|\n)\s*(?:STYLE|Selected style|CHOSEN STYLE)[^\n]*/i);
@@ -1355,8 +1385,9 @@ async function runStage2(){
     };
     const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
       latest = all;
+      setStatus("stage 2 — building page", "live");
       if(!frame) frame = requestAnimationFrame(paint);
-    });
+    }, () => setStatus("stage 2 — reasoning", "live"));
     if(frame) cancelAnimationFrame(frame);
     latest = raw;
     paint();
