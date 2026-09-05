@@ -828,9 +828,9 @@ function onProviderChange(){
   store.del("pf:customModel");
   populateModelsForProvider(p, "");   // full wipe of the previous provider's list
 
-  const cur = $("baseUrl").value.trim();
-  const knownBases = Object.values(PROVIDERS).map(x => x.base);
-  if(!cur || knownBases.includes(cur)) $("baseUrl").value = cfg.base;
+  // A provider selection is authoritative: discard any manually entered URL
+  // and start from the selected provider's documented endpoint every time.
+  $("baseUrl").value = cfg.base;
 
   const hint = $("apiKeyHint");
   if(hint) hint.textContent = cfg.keyHint;
