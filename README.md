@@ -98,7 +98,10 @@ The **API Provider** dropdown has one entry per runtime. Pick yours and the base
 | `OpenAI` | `https://api.openai.com/v1` | Yes |
 | `Anthropic` | `https://api.anthropic.com/v1` | Yes |
 | `OpenRouter` | `https://openrouter.ai/api/v1` | Yes |
-| `NVIDIA NIM` | `https://integrate.api.nvidia.com/v1` | Yes — use through a same-origin/server-side proxy from the hosted app |
+<!-- NVIDIA NIM is intentionally disabled in the GitHub Pages build. Uncomment
+this row and the marked blocks in index.html when deploying with a same-origin/
+server-side proxy. -->
+<!-- | `NVIDIA NIM` | `https://integrate.api.nvidia.com/v1` | Yes — use through a same-origin/server-side proxy from the hosted app | -->
 | `Custom (OpenAI-compatible)` | whatever you type — vLLM, Groq, Mistral, DeepSeek and friends live here | Only if the server asks |
 
 Hit **Fetch** and the Model dropdown rebuilds itself from what that endpoint actually serves — the old list is cleared first, every time, so nothing from the previous provider is left behind. Switching provider does the same refresh on its own, and **Custom / Enter manually…** at the bottom of the list covers any model the endpoint doesn't advertise.
@@ -115,9 +118,12 @@ The app tells you which one you hit right when it happens, so you're never guess
 ## A few tips for best results
 
 - Set **max tokens** to at least 16000 — a full page is long, and a cut-off build is the most common hiccup. The status bar flags it for you.
-- Temperature around `0.9` works well for the creative brief step; lower it if you want the build step to be more literal. **Reasoning effort** replaces Temperature directly below the Model picker for native Claude models and for OpenRouter models whose model metadata advertises its unified `reasoning` parameter. NVIDIA NIM and other OpenAI-compatible endpoints use Temperature because they do not share one documented reasoning-effort control across all hosted models.
+- Temperature around `0.9` works well for the creative brief step; lower it if you want the build step to be more literal. **Reasoning effort** replaces Temperature directly below the Model picker for native Claude models and for OpenRouter models whose model metadata advertises its unified `reasoning` parameter. Other OpenAI-compatible endpoints use Temperature because they do not share one documented reasoning-effort control across all hosted models.
 - Your API key only ever gets stored in *your own browser* if you tick "Remember key," and it's only ever sent to the endpoint you chose. Nothing passes through any third-party server.
-- **NVIDIA NIM on the hosted GitHub Pages app requires a proxy.** NVIDIA's cloud endpoint does not permit requests from this page's browser origin, so point the **Custom** provider at a same-origin/server-side proxy that forwards requests to NVIDIA NIM. This is a browser CORS restriction, not an API-key or model-setting issue.
+<!-- NVIDIA NIM is intentionally disabled in the GitHub Pages build. Uncomment
+this note when re-enabling the provider for a deployment with a same-origin/
+server-side proxy. -->
+<!-- - **NVIDIA NIM requires a proxy in the hosted GitHub Pages app.** NVIDIA's cloud endpoint does not permit requests from this page's browser origin, so point the **Custom** provider at a same-origin/server-side proxy that forwards requests to NVIDIA NIM. This is a browser CORS restriction, not an API-key or model-setting issue. -->
 - The actual prompts that drive the AI live right in the **PROMPTS** panel in the app — feel free to read them, learn from them, or rewrite them entirely. That's the real product; the interface is just the runner.
 
 ---

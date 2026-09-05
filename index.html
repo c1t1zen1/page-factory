@@ -357,7 +357,11 @@ iframe.preview[hidden]{ display:none; }
         <option value="ollama">Ollama</option>
         <option value="lmstudio">LM Studio</option>
         <option value="openrouter">OpenRouter</option>
-        <option value="nvidia">NVIDIA NIM</option>
+        <!-- NVIDIA NIM is disabled for the GitHub Pages build because its API
+             cannot be called directly from this browser origin. Uncomment this
+             option and the matching PROVIDERS.nvidia block when deploying with
+             a same-origin/server-side proxy. -->
+        <!-- <option value="nvidia">NVIDIA NIM</option> -->
         <option value="custom">Custom (OpenAI-compatible)</option>
       </select>
 
@@ -702,6 +706,9 @@ const PROVIDERS = {
     keyHint: "— sk-or-…",
     keyPlaceholder: "sk-or-…"
   },
+  /* NVIDIA NIM is disabled for the GitHub Pages build because its API cannot
+     be called directly from this browser origin. Uncomment this block and the
+     matching provider option when deploying with a same-origin/server-side proxy.
   nvidia: {
     label: "NVIDIA NIM",
     base: "https://integrate.api.nvidia.com/v1",
@@ -710,7 +717,7 @@ const PROVIDERS = {
     models: [],
     keyHint: "— NVIDIA API key · proxy required on this hosted app",
     keyPlaceholder: "nvapi-…"
-  },
+  }, */
   custom: {
     label: "Custom (OpenAI-compatible)",
     base: "http://localhost:8080/v1",
@@ -839,11 +846,13 @@ function onProviderChange(){
 
   syncSamplingControl();
   saveSettings();
+  /* Re-enable with PROVIDERS.nvidia when deploying with a same-origin/server-side proxy.
   if(cfg.browserProxyRequired){
     setStatus("NVIDIA NIM needs a same-origin proxy", "err");
   } else {
     fetchModels({ quiet:true });      // refresh the list against the new endpoint
-  }
+  } */
+  fetchModels({ quiet:true });        // refresh the list against the new endpoint
 }
 $("provider").addEventListener("change", onProviderChange);
 
@@ -1063,12 +1072,13 @@ async function fetchModels(opts = {}){
   const sel = $("model");
   const cfg = PROVIDERS[$("provider").value] || PROVIDERS.custom;
 
+  /* Re-enable with PROVIDERS.nvidia when deploying with a same-origin/server-side proxy.
   if(cfg.browserProxyRequired){
     setModelOptions([], currentModel());
     if(!quiet) notice(`<b>NVIDIA NIM cannot be called directly from this hosted page.</b> NVIDIA's API does not allow browser requests from <code>https://c1t1zen1.github.io</code> (CORS). Put a small server-side proxy in front of NIM, select <b>Custom</b>, and enter that proxy's <code>/v1</code> URL.`);
     setStatus("NVIDIA NIM needs a same-origin proxy", "err");
     return;
-  }
+  } */
 
   /* Wipe the list, the custom box and the stored pick *before* asking, so a
      slow or failed request can never leave the previous endpoint's models on
@@ -1362,11 +1372,12 @@ $("stop").addEventListener("click", () => { if(controller) controller.abort(); }
 function preflight(){
   document.querySelectorAll(".notice").forEach(n => n.remove());
   const cfg = PROVIDERS[$("provider").value] || PROVIDERS.custom;
+  /* Re-enable with PROVIDERS.nvidia when deploying with a same-origin/server-side proxy.
   if(cfg.browserProxyRequired){
     notice(`<b>NVIDIA NIM is blocked by CORS from this hosted static app.</b> Use a same-origin/server-side proxy for <code>https://integrate.api.nvidia.com/v1</code>, then choose <b>Custom</b> and enter the proxy's <code>/v1</code> URL.`);
     setStatus("NVIDIA NIM needs a same-origin proxy", "err");
     return false;
-  }
+  } */
   if(!currentModel()){ notice("<b>No model set.</b> Select a model from the dropdown, type a model name, or press Fetch to list what the endpoint offers."); return false; }
   if(!base()){ notice("<b>No base URL.</b>"); return false; }
   return true;
