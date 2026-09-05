@@ -109,11 +109,19 @@ button{ font:inherit; color:inherit; }
 .rail{
   border-right:1px solid var(--line);
   background:color-mix(in srgb, var(--ink) 92%, black);
-  padding:0 0 120px;
+  display:flex;
+  flex-direction:column;
+  padding:0;
   height:100%;
   max-height:100%;
   min-height:0;
+  overflow:hidden;
+}
+.rail-content{
+  flex:1 1 auto;
+  min-height:0;
   overflow-y:auto;
+  padding-bottom:24px;
 }
 .stage{
   padding:0;
@@ -187,7 +195,7 @@ select{ appearance:none; background-image:linear-gradient(45deg,transparent 50%,
    RUN BAR
    ============================================================ */
 .runbar{
-  position:sticky; bottom:0; z-index:20;
+  flex:0 0 auto;
   padding:12px 16px;
   background:var(--ink);
   border-top:1px solid var(--line);
@@ -309,10 +317,10 @@ iframe.preview[hidden]{ display:none; }
 @media (max-width:900px){
   body{ height:auto; min-height:100dvh; overflow-x:hidden; overflow-y:auto; background-size:32px 32px; }
   .shell{ grid-template-columns:1fr; flex:none; min-height:auto; }
-  .rail{ max-height:none; height:auto; min-height:0; border-right:0; border-bottom:1px solid var(--line); padding-bottom:0; }
+  .rail{ max-height:none; height:auto; min-height:0; border-right:0; border-bottom:1px solid var(--line); overflow:visible; }
+  .rail-content{ overflow:visible; padding-bottom:24px; }
   /* Keep a definite height here too — the panes flex against it. */
   .stage{ max-height:none; height:calc(100dvh - 56px); min-height:460px; }
-  .runbar{ position:sticky; bottom:0; }
 }
 @media (max-width:420px){
   .row{ grid-template-columns:1fr; }
@@ -336,6 +344,7 @@ iframe.preview[hidden]{ display:none; }
 
 <!-- ==================== RAIL ==================== -->
 <div class="rail">
+  <div class="rail-content">
 
   <details class="panel" open>
     <summary>01 · MODEL</summary>
@@ -458,6 +467,7 @@ iframe.preview[hidden]{ display:none; }
     </div>
   </details>
 
+  </div>
   <div class="runbar">
     <button class="btn" id="runAll">Run both stages</button>
     <div class="btn-pair">
