@@ -2,9 +2,9 @@
 
 # 🏭 Page Factory
 
-### Type a few lines about your website. Get a real one back — in seconds.
+### Type a few lines about your website. Get a complete webpage code block back — in seconds.
 
-No coding experience needed. No sign-up. No backend. Just your idea, in, and a finished, working website, out.
+No coding experience needed. No sign-up. No backend. Just your idea, in, and one finished, working webpage as a single self-contained `index.html` code block, out.
 
 [![License: MIT](https://img.shields.io/github/license/c1t1zen1/page-factory?color=blue)](LICENSE)
 [![Top language](https://img.shields.io/github/languages/top/c1t1zen1/page-factory)](index.html)
@@ -25,27 +25,27 @@ No coding experience needed. No sign-up. No backend. Just your idea, in, and a f
 
 ## What is this, actually?
 
-Page Factory is one HTML file that turns a short description — "landing page for my dog-walking business" — into a complete, good-looking, ready-to-publish website. You don't write any code. You don't install anything. You just describe what you want, click a button, and watch it build the page in front of you.
+Page Factory is one HTML file that turns a short description — "webpage for my dog-walking business" — into a complete, good-looking, ready-to-publish webpage. You don't write any code. You don't install anything. You just describe what you want, click a button, and watch it build one complete, self-contained `index.html` webpage in a single code block.
 
 It's aimed squarely at people who've **never touched HTML** and don't want to. If you can type a sentence, you can make a website.
 
 Under the hood it talks to an AI model to do the actual writing and designing — but you bring your own model (that's the "bring your own key" part), so there's no subscription, no account, and nothing running on anyone's server but your own browser.
 
 <p align="center">
-  <img src="screenshots/app-main-layout.png" alt="Page Factory main interface — describe your page on the left, watch it build on the right" width="90%">
+  <img src="screenshots/app-main-layout.png" alt="Page Factory main interface — describe your webpage on the left, then inspect its complete HTML code and preview on the right" width="90%">
 </p>
 
 ## Why people like it
 
 - **Simple.** One text box. Describe your business or idea in plain English. That's the whole learning curve.
-- **Fast.** Two short AI steps and you have a finished page — usually well under a minute once it's running.
+- **Fast.** Two short AI steps and you have a finished webpage — usually well under a minute once it's running.
 - **Fun.** Watching a real design brief and a real webpage write themselves in front of you, live, never gets old.
-- **Yours.** The output is a normal `index.html` file. Download it, host it anywhere, edit it in Notepad, hand it to a developer — it's not locked into anything.
+- **Yours.** The output is one complete HTML code block: a normal, self-contained `index.html` webpage. Copy it, download it, host it anywhere, edit it in Notepad, hand it to a developer — it's not locked into anything.
 - **Honest about gaps.** If you leave something out, the AI invents something reasonable and clearly marks it `[ASSUMED]` so you know exactly what to double-check or change.
 
 ## See it in action
 
-Every generated page is different — the tool deliberately avoids the "every AI website looks the same" trap by picking a genuinely different visual style each time, based on what you're describing. Here are two examples generated from two very different one-line briefs:
+Every generated webpage is different — the tool deliberately avoids the "every AI website looks the same" trap by picking a genuinely different visual style each time, based on what you're describing. Here are two examples generated from two very different one-line briefs:
 
 <table>
 <tr>
@@ -64,10 +64,10 @@ Same tool, same two-step process, two completely different websites — because 
 
 ## How it works
 
-Making the page happens in two quick steps:
+Making your complete webpage happens in two quick steps:
 
-1. **Stage 1 — The Brief.** You type a few lines about your site. The AI turns that into a real design plan: colors, fonts, layout, the actual words on the page, even a custom interactive touch — all before a single line of code is written.
-2. **Stage 2 — The Build.** The AI takes that plan and writes it into one complete, working `index.html` file — ready to open, preview, or publish immediately.
+1. **Stage 1 — The Brief.** You type a few lines about your website. The AI turns that into a real design plan: colors, fonts, layout, the actual words on the webpage, even a custom interactive touch — all before a single line of code is written.
+2. **Stage 2 — The Build.** The AI takes that plan and writes one complete, self-contained `index.html` webpage in a single HTML code block — ready to copy, open, preview, download, or publish immediately.
 
 You can read and tweak the brief between the two steps, so if the AI assumed something wrong (say, the wrong city or the wrong tone), you fix it *before* it gets built — not after.
 
@@ -77,7 +77,7 @@ You can read and tweak the brief between the two steps, so if the AI assumed som
 2. Point it at an AI model. The easiest option if you don't have one yet: get a free or low-cost key from [OpenAI](https://platform.openai.com) or [OpenRouter](https://openrouter.ai), paste it in, pick "OpenAI-compatible."
 3. Type a few lines describing your website in plain language.
 4. Click **Run both stages** and watch it build.
-5. Preview it, then hit **Download** — you now own a finished website.
+5. Preview it, then hit **Download** — you now own one complete `index.html` webpage.
 
 Prefer to run it on your own computer instead of the hosted version? Download `index.html` from this repo and open it directly in any browser, or serve it locally:
 

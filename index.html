@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page Factory — brief in, landing page out</title>
-<meta name="description" content="A static, bring-your-own-key tool that turns a few lines of brief into a complete single-file landing page. Works with llama.cpp, OpenAI-compatible endpoints, and Anthropic.">
+<title>Page Factory — brief in, complete webpage code out</title>
+<meta name="description" content="A static, bring-your-own-key tool that turns a few lines of brief into one complete, self-contained webpage in a single HTML code block. Works with llama.cpp, OpenAI-compatible endpoints, and Anthropic.">
 <meta name="application-name" content="Page Factory">
 <meta name="theme-color" content="#0B1620">
 <meta name="color-scheme" content="dark">
@@ -13,17 +12,16 @@
 <link rel="mask-icon" href="favicon.svg" color="#C7F03C">
 <link rel="manifest" href="site.webmanifest">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Page Factory">
-<meta property="og:title" content="Page Factory — brief in, landing page out">
-<meta property="og:description" content="Turn a few lines of brief into a complete, single-file landing page in your browser.">
+<meta property="og:title" content="Page Factory — brief in, complete webpage code out">
+<meta property="og:description" content="Turn a few lines of brief into one complete, self-contained webpage in a single HTML code block.">
 <meta property="og:url" content="https://c1t1zen1.github.io/page-factory/">
 <meta property="og:image" content="https://c1t1zen1.github.io/page-factory/screenshots/app-main-layout.png">
-<meta property="og:image:alt" content="Page Factory interface for generating a website from a design brief">
+<meta property="og:image:alt" content="Page Factory interface for generating a complete webpage from a design brief">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Page Factory — brief in, landing page out">
-<meta name="twitter:description" content="Turn a few lines of brief into a complete, single-file landing page in your browser.">
+<meta name="twitter:title" content="Page Factory — brief in, complete webpage code out">
+<meta name="twitter:description" content="Turn a few lines of brief into one complete, self-contained webpage in a single HTML code block.">
 <meta name="twitter:image" content="https://c1t1zen1.github.io/page-factory/screenshots/app-main-layout.png">
-<meta name="twitter:image:alt" content="Page Factory interface for generating a website from a design brief">
+<meta name="twitter:image:alt" content="Page Factory interface for generating a complete webpage from a design brief">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -335,7 +333,7 @@ iframe.preview[hidden]{ display:none; }
 
 <header class="masthead">
   <h1 class="wordmark">PAGE<span>·</span>FACTORY</h1>
-  <span class="tagline">brief in → single-file landing page out</span>
+  <span class="tagline">brief in → complete webpage code out</span>
   <span class="spacer"></span>
   <a href="#how" id="howlink">how it works</a>
 </header>
@@ -415,8 +413,8 @@ iframe.preview[hidden]{ display:none; }
       </div>
 
       <div id="quickPane">
-        <label for="quickText">Describe it in a few lines</label>
-        <textarea id="quickText" rows="6" placeholder="Landing page for my AI video work — a reel of generated shots, mostly directors and ad agencies looking for someone who can actually deliver. Want them to book a call."></textarea>
+        <label for="quickText">Describe the webpage in a few lines</label>
+        <textarea id="quickText" rows="6" placeholder="Webpage for my AI video work — a reel of generated shots, mostly directors and ad agencies looking for someone who can actually deliver. Want them to book a call."></textarea>
         <p style="font-size:11.5px;color:var(--mute);margin:8px 0 0">Anything you leave out gets invented and tagged <b style="color:var(--paper-2)">[ASSUMED]</b> in the brief so you can correct it.</p>
       </div>
 
@@ -486,7 +484,7 @@ iframe.preview[hidden]{ display:none; }
 <div class="stage">
   <div class="tabs" role="tablist">
     <button class="tab" id="tabBrief" role="tab" aria-selected="false" aria-controls="paneBrief">DESIGN BRIEF</button>
-    <button class="tab" id="tabCode"  role="tab" aria-selected="false" aria-controls="paneCode">PAGE CODE</button>
+    <button class="tab" id="tabCode"  role="tab" aria-selected="false" aria-controls="paneCode">WEBPAGE CODE</button>
     <button class="tab" id="tabPrev"  role="tab" aria-selected="false" aria-controls="panePrev">PREVIEW</button>
     <span class="spacer"></span>
     <div class="toolbar">
@@ -516,13 +514,13 @@ iframe.preview[hidden]{ display:none; }
   <div class="viewport">
     <div class="pane on" id="paneEmpty">
       <div class="empty" id="how">
-        <h2>Bring your own model. Get a whole page.</h2>
-        <p>Stage&nbsp;1 turns your notes into a full design brief — style, palette, type, layout, copy, a signature interactive module, and a lead-capture spec. Stage&nbsp;2 builds that brief into one self-contained HTML file.</p>
+        <h2>Bring your own model. Get a complete webpage.</h2>
+        <p>Stage&nbsp;1 turns your notes into a full design brief — style, palette, type, layout, copy, a signature interactive module, and a lead-capture spec. Stage&nbsp;2 turns that brief into one complete, self-contained webpage in a single HTML code block: a ready-to-save <code>index.html</code> file.</p>
         <p>The brief is editable between stages. Rewrite anything you disagree with before you build.</p>
         <ol>
           <li>Point it at a model. For <code>llama-server</code>, use <code>http://localhost:8080/v1</code> and leave the key blank.</li>
-          <li>Write a few lines about the page. Detail is optional — gaps get filled and flagged.</li>
-          <li>Run both stages, then copy, preview, or download the result.</li>
+          <li>Write a few lines about the webpage you want. Detail is optional — gaps get filled and flagged.</li>
+          <li>Run both stages, then copy, preview, or download your complete <code>index.html</code> webpage.</li>
         </ol>
         <p style="margin-top:22px;font-size:12.5px">Nothing is sent anywhere except the endpoint you name. There is no backend here — this is one static file.</p>
       </div>
@@ -532,7 +530,7 @@ iframe.preview[hidden]{ display:none; }
     <div class="pane" id="panePrev">
       <div class="preview-empty" id="previewEmpty">
         <strong>No preview yet</strong>
-        <span>Run <code>Stage 2</code> (or <code>Run both stages</code>) and the finished page renders here.</span>
+        <span>Run <code>Stage 2</code> (or <code>Run both stages</code>) and your finished webpage renders here.</span>
       </div>
       <iframe class="preview" id="frame" title="Rendered preview" sandbox="allow-scripts allow-popups allow-forms allow-modals" hidden></iframe>
     </div>
@@ -1417,7 +1415,7 @@ async function runStage2(){
   if(!preflight()) return false;
   const brief = $("briefOut").value.trim();
   if(!brief){ notice("<b>No brief yet.</b> Run stage 1 first, or paste a brief into the Design Brief tab."); return false; }
-  setBusy(true); startClock(); setStatus("stage 2 — building page", "live");
+  setBusy(true); startClock(); setStatus("stage 2 — building webpage", "live");
   pageCode = ""; $("codeOut").textContent = ""; show("code");
   try{
     let frame = 0, latest = "";
@@ -1431,7 +1429,7 @@ async function runStage2(){
     };
     const raw = await stream($("p2").value, "DESIGN BRIEF\n\n" + brief, (_p, all) => {
       latest = all;
-      setStatus("stage 2 — building page", "live");
+      setStatus("stage 2 — building webpage", "live");
       if(!frame) frame = requestAnimationFrame(paint);
     }, () => setStatus("stage 2 — reasoning", "live"));
     if(frame) cancelAnimationFrame(frame);
@@ -1440,7 +1438,7 @@ async function runStage2(){
     pageCode = extractHtml(raw);
     $("codeOut").textContent = pageCode;
     if(!/<\/html>/i.test(pageCode)) setStatus("built — output looks truncated, raise max tokens", "err");
-    else setStatus("page ready", "");
+    else setStatus("webpage ready — copy or download index.html", "");
     syncToolbar();
     renderPreview();
     show("prev");
