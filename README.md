@@ -40,7 +40,7 @@ Under the hood it talks to an AI model to do the actual writing and designing �
 - **Simple.** One text box. Describe your business or idea in plain English. That's the whole learning curve.
 - **Fast.** Two short AI steps and you have a finished webpage — usually well under a minute once it's running.
 - **Fun.** Watching a real design brief and a real webpage write themselves in front of you, live, never gets old.
-- **Yours.** The output is one complete HTML code block: a normal, self-contained `index.html` webpage. Copy it, download it, host it anywhere, edit it in Notepad, hand it to a developer — it's not locked into anything.
+- **Yours.** The output is one complete HTML code block: a normal, self-contained `index.html` webpage. Copy it, download it, host it anywhere, edit it in Notepad, hand it to a developer — it's not locked into anything. The **Export project** toolbar button also saves the full project JSON (settings, prompts, design brief, and code) alongside the generated `index.html`.
 - **Honest about gaps.** If you leave something out, the AI invents something reasonable and clearly marks it `[ASSUMED]` so you know exactly what to double-check or change.
 
 ## See it in action
@@ -77,7 +77,7 @@ You can read and tweak the brief between the two steps, so if the AI assumed som
 2. Point it at an AI model. The easiest option if you don't have one yet: get a free or low-cost key from [OpenAI](https://platform.openai.com) or [OpenRouter](https://openrouter.ai), paste it in, pick "OpenAI-compatible."
 3. Type a few lines describing your website in plain language.
 4. Click **Run both stages** and watch it build.
-5. Preview it, then hit **Download** — you now own one complete `index.html` webpage.
+5. Preview it, then hit **Download** for the active brief/page, or **Export project** to download `page-factory-project.json` plus the generated `index.html` together. Project exports intentionally exclude API keys.
 
 Prefer to run it on your own computer instead of the hosted version? Download `index.html` from this repo and open it directly in any browser, or serve it locally:
 

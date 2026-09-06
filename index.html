@@ -188,6 +188,26 @@ select{ appearance:none; background-image:linear-gradient(45deg,transparent 50%,
 .inline-btn:hover:not(:disabled){ border-color:var(--cyan); color:var(--cyan); }
 .inline-btn:disabled{ opacity:.4; cursor:not-allowed; }
 .url-row{ display:grid; grid-template-columns:1fr auto; gap:8px; }
+.prompt-actions{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin:0 0 8px; }
+.prompt-actions .inline-btn{ padding:6px 5px; font-family:var(--mono); font-size:9.5px; letter-spacing:.04em; }
+
+/* ============================================================
+   PROMPT REWRITE DIALOG
+   ============================================================ */
+dialog.prompt-dialog{
+  width:min(560px, calc(100vw - 32px)); padding:0;
+  color:var(--paper); background:var(--ink-1); border:1px solid var(--line); border-radius:0;
+  box-shadow:0 24px 80px rgb(0 0 0 / .55);
+}
+dialog.prompt-dialog::backdrop{ background:rgb(0 0 0 / .68); backdrop-filter:blur(3px); }
+.dialog-body{ padding:20px; }
+.dialog-kicker{ margin:0 0 5px; font-family:var(--mono); font-size:10px; letter-spacing:.12em; color:var(--signal); }
+.dialog-body h2{ margin:0; font-family:var(--display); font-size:24px; letter-spacing:-.025em; }
+.dialog-body p{ margin:8px 0 16px; color:var(--paper-2); font-size:13px; }
+.dialog-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+.dialog-actions .inline-btn{ min-width:84px; }
+.dialog-actions .primary{ border-color:var(--signal); background:var(--signal); color:var(--ink); }
+.dialog-actions .primary:hover:not(:disabled){ border-color:var(--cyan); background:var(--cyan); color:var(--ink); }
 
 /* ============================================================
    RUN BAR
@@ -460,10 +480,20 @@ iframe.preview[hidden]{ display:none; }
   <details class="panel">
     <summary>03 · PROMPTS</summary>
     <div class="panel-body">
-      <p style="font-size:12px;color:var(--mute);margin:8px 0 0">Edit these to retune the factory. Reset restores the defaults.</p>
+      <p style="font-size:12px;color:var(--mute);margin:8px 0 0">Choose a starting point, edit either prompt, or have your selected AI rewrite one stage from a direction you provide. Reset restores the defaults.</p>
       <label for="p1">Stage 1 — brief generator</label>
+      <div class="prompt-actions" role="group" aria-label="Stage 1 prompt options">
+        <button class="inline-btn" id="p1Default" type="button">Default</button>
+        <button class="inline-btn" id="p1Simple" type="button">Simple</button>
+        <button class="inline-btn" id="p1Rewrite" type="button">Rewrite with AI</button>
+      </div>
       <textarea id="p1" rows="8" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea>
       <label for="p2">Stage 2 — builder</label>
+      <div class="prompt-actions" role="group" aria-label="Stage 2 prompt options">
+        <button class="inline-btn" id="p2Default" type="button">Default</button>
+        <button class="inline-btn" id="p2Simple" type="button">Simple</button>
+        <button class="inline-btn" id="p2Rewrite" type="button">Rewrite with AI</button>
+      </div>
       <textarea id="p2" rows="8" spellcheck="false" style="font-family:var(--mono);font-size:11px"></textarea>
       <button class="inline-btn" id="resetPrompts" style="margin-top:12px">Reset prompts</button>
     </div>
@@ -479,6 +509,22 @@ iframe.preview[hidden]{ display:none; }
     <button class="btn ghost" id="stop" hidden>Stop</button>
   </div>
 </div>
+
+<dialog class="prompt-dialog" id="promptRewriteDialog" aria-labelledby="promptRewriteTitle">
+  <form id="promptRewriteForm">
+    <div class="dialog-body">
+      <p class="dialog-kicker" id="promptRewriteStage">PROMPT REWRITE</p>
+      <h2 id="promptRewriteTitle">Steer the rewrite</h2>
+      <p>Describe how the selected AI should revise this stage prompt. It will update only this prompt, not your brief or webpage output.</p>
+      <label for="promptRewriteDirection">Your direction</label>
+      <textarea id="promptRewriteDirection" rows="4" required placeholder="Keep the webpage short, make it more technically minded…"></textarea>
+      <div class="dialog-actions">
+        <button class="inline-btn" id="promptRewriteCancel" type="button">Cancel</button>
+        <button class="inline-btn primary" id="promptRewriteSubmit" type="submit">Rewrite prompt</button>
+      </div>
+    </div>
+  </form>
+</dialog>
 
 <!-- ==================== STAGE ==================== -->
 <div class="stage">
@@ -499,6 +545,9 @@ iframe.preview[hidden]{ display:none; }
       </button>
       <button class="icon-btn" id="btnDl" title="Download" aria-label="Download file" disabled>
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>
+      </button>
+      <button class="icon-btn" id="btnExport" title="Export project JSON and webpage HTML" aria-label="Export project JSON and webpage HTML">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/><path d="M19 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2"/><path d="M5 4H3a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h2"/></svg>
       </button>
     </div>
   </div>
@@ -653,6 +702,48 @@ STYLES.forEach(s => { const o = document.createElement("option"); o.value = o.te
 /* ---------- defaults & providers ---------- */
 const DEFAULT_P1 = $("src-p1").textContent.trim();
 const DEFAULT_P2 = $("src-p2").textContent.trim();
+const SIMPLE_P1 = `Generate a ONE-PAGE LANDING PAGE creation prompt using a RANDOMLY SELECTED design style from the following list, or choose your own style if you identify something more suitable that's not listed. IMPORTANT: Use a random selection method - any method that ensures variety. DO NOT default to Neobrutalist or any particular favorite. Actually randomize your selection.
+
+**Available Design Styles (not limited to these - feel free to identify and use other professional styles):**
+
+- Neobrutalist (raw, bold, confrontational with structured impact)
+- Swiss/International (grid-based, systematic, ultra-clean typography)
+- Editorial (magazine-inspired, sophisticated typography, article-focused)
+- Glassmorphism (translucent layers, blurred backgrounds, depth)
+- Retro-futuristic (80s vision of the future, refined nostalgia)
+- Bauhaus (geometric simplicity, primary shapes, form follows function)
+- Art Deco (elegant patterns, luxury, vintage sophistication)
+- Minimal (extreme reduction, maximum whitespace, essential only)
+- Flat (no depth, solid colors, simple icons, clean)
+- Material (Google-inspired, cards, subtle shadows, motion)
+- Neumorphic (soft shadows, extruded elements, tactile)
+- Monochromatic (single color variations, tonal depth)
+- Scandinavian (hygge, natural materials, warm minimalism)
+- Japandi (Japanese-Scandinavian fusion, zen meets hygge)
+- Dark Mode First (designed for dark interfaces, high contrast elegance)
+- Modernist (clean lines, functional beauty, timeless)
+- Organic/Fluid (flowing shapes, natural curves, sophisticated blob forms)
+- Corporate Professional (trust-building, established, refined)
+- Tech Forward (innovative, clean, future-focused)
+- Luxury Minimal (premium restraint, high-end simplicity)
+- Neo-Geo (refined geometric patterns, mathematical beauty)
+- Kinetic (motion-driven, dynamic but controlled)
+- Gradient Modern (sophisticated color transitions, depth through gradients)
+- Typography First (type as the hero, letterforms as design)
+- Metropolitan (urban sophistication, cultural depth)
+
+**Instructions:**
+
+After selecting a design style (either from the list or your own professional choice), create a ONE-PAGE LANDING PAGE prompt that is EXACTLY THREE PARAGRAPHS. Focus intensely on conveying the FEELING and ATMOSPHERE of the chosen style:
+
+Paragraph 1: State the chosen style(s) and ask the AI to conceive an innovative business/service concept for a SINGLE-PAGE landing page. Describe the core emotional qualities and feeling this style evokes - what mood should visitors experience as they arrive? How should the visual hierarchy and flow make them feel as they scroll through this single cohesive page? Include a note to incorporate colorful elements as appropriate to enhance the design's emotional impact.
+
+Paragraph 2: Explain the design philosophy through the lens of emotion and user experience. How should typography feel - authoritative, welcoming, cutting-edge? What sensation should interactions and animations create - smooth and liquid, snappy and precise, gentle and organic? Describe how the single-page journey should emotionally progress from first impression through final call-to-action, creating a complete narrative arc in one scrolling experience.
+
+Paragraph 3: Provide abstract reference points that capture this aesthetic's essence - think about the feeling of certain types of spaces, cultural movements, artistic periods, architectural styles, or design philosophies that embody this aesthetic. Reference the emotional qualities of premium experiences, sophisticated environments, or refined craftsmanship that should inspire the design. Explain how these abstract references should influence the emotional quality and visual sophistication of the final single-page design, without naming specific brands or platforms.
+
+The generated prompt must emphasize this is ONE COHESIVE LANDING PAGE with a single scrolling experience. Focus on feeling, atmosphere, and abstract quality references rather than technical details or specific examples. Keep all references conceptual and high-level to allow for maximum creative interpretation.`;
+const SIMPLE_P2 = "Create this in a single code but for HTML+CSS+JS";
 
 const PROVIDERS = {
   llamacpp: {
@@ -914,6 +1005,67 @@ $("resetPrompts").addEventListener("click", () => {
   $("p1").value = DEFAULT_P1; $("p2").value = DEFAULT_P2; saveSettings(); toast("prompts reset");
 });
 
+function setPrompt(id, value, label){
+  $(id).value = value;
+  saveSettings();
+  toast(label);
+}
+
+$("p1Default").addEventListener("click", () => setPrompt("p1", DEFAULT_P1, "stage 1 default selected"));
+$("p1Simple").addEventListener("click", () => setPrompt("p1", SIMPLE_P1, "stage 1 simple prompt selected"));
+$("p2Default").addEventListener("click", () => setPrompt("p2", DEFAULT_P2, "stage 2 default selected"));
+$("p2Simple").addEventListener("click", () => setPrompt("p2", SIMPLE_P2, "stage 2 simple prompt selected"));
+
+let rewritePromptTarget = "";
+function openPromptRewrite(target){
+  rewritePromptTarget = target;
+  const stage = target === "p1" ? "STAGE 1 · BRIEF GENERATOR" : "STAGE 2 · BUILDER";
+  $("promptRewriteStage").textContent = stage;
+  $("promptRewriteDirection").value = "";
+  $("promptRewriteDialog").showModal();
+  $("promptRewriteDirection").focus();
+}
+function closePromptRewrite(){
+  $("promptRewriteDialog").close();
+  rewritePromptTarget = "";
+}
+$("p1Rewrite").addEventListener("click", () => openPromptRewrite("p1"));
+$("p2Rewrite").addEventListener("click", () => openPromptRewrite("p2"));
+$("promptRewriteCancel").addEventListener("click", closePromptRewrite);
+$("promptRewriteDialog").addEventListener("close", () => { rewritePromptTarget = ""; });
+$("promptRewriteForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const target = rewritePromptTarget;
+  const direction = $("promptRewriteDirection").value.trim();
+  if(!target || !direction) return;
+  if(!preflight()) return;
+
+  const submit = $("promptRewriteSubmit");
+  const cancel = $("promptRewriteCancel");
+  submit.disabled = true; cancel.disabled = true; submit.textContent = "Rewriting…";
+  setBusy(true); startClock(); setStatus("rewriting prompt", "live");
+  try{
+    const stageName = target === "p1" ? "Stage 1 brief-generator" : "Stage 2 builder";
+    const rewritten = await stream(
+      "You are an expert prompt editor. Return only the complete rewritten system prompt as plain text. Preserve the original prompt's job and useful constraints unless the user's direction explicitly changes them. Do not add commentary, markdown fences, or explanations.",
+      `Rewrite this ${stageName} system prompt according to the user's direction.\n\nCURRENT PROMPT:\n---\n${$(target).value}\n---\n\nUSER DIRECTION:\n${direction}`,
+      () => {},
+      () => setStatus("rewriting prompt — reasoning", "live")
+    );
+    const result = rewritten.trim();
+    if(!result) throw new Error("The model returned an empty prompt.");
+    setPrompt(target, result, `${target === "p1" ? "stage 1" : "stage 2"} prompt rewritten`);
+    setStatus("prompt rewritten — ready to run", "");
+    closePromptRewrite();
+  }catch(err){
+    if(err.name === "AbortError") setStatus("prompt rewrite stopped", "");
+    else explain(err);
+  }finally{
+    submit.disabled = false; cancel.disabled = false; submit.textContent = "Rewrite prompt";
+    setBusy(false); stopClock();
+  }
+});
+
 /* ---------- brief mode ---------- */
 function setMode(m){
   const q = m === "quick";
@@ -961,6 +1113,7 @@ function syncToolbar(){
   $("btnPrev").disabled = !hasCode;
   $("btnTab").disabled = !hasCode;
   $("btnDl").disabled = !(hasCode || hasBrief);
+  $("btnExport").disabled = busy;
 }
 $("briefOut").addEventListener("input", syncToolbar);
 
@@ -984,12 +1137,40 @@ $("btnDl").addEventListener("click", () => {
   const isBrief = tab === "brief";
   const body = isBrief ? $("briefOut").value : extractHtml(pageCode || $("codeOut").textContent);
   const name = isBrief ? "design-brief.md" : "index.html";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([body], {type: isBrief ? "text/markdown" : "text/html"}));
-  a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  downloadFile(body, name, isBrief ? "text/markdown" : "text/html");
   toast("saved " + name);
 });
+function downloadFile(body, name, type){
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(new Blob([body], {type}));
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+function projectExport(){
+  const settings = {};
+  FIELDS.forEach(id => { if($(id)) settings[id] = $(id).value; });
+  settings.model = currentModel();
+  settings.customModel = $("customModel").value;
+  settings.mode = $("modeQuick").getAttribute("aria-pressed") === "true" ? "quick" : "full";
+  settings.referenceText = $("refText").value;
+
+  const code = extractHtml(pageCode || $("codeOut").textContent);
+  const project = {
+    format: "page-factory-project",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    note: "API keys and remembered-key preferences are intentionally excluded from project exports.",
+    settings,
+    outputs: {
+      designBrief: $("briefOut").value,
+      webpageCode: code
+    }
+  };
+  downloadFile(JSON.stringify(project, null, 2) + "\n", "page-factory-project.json", "application/json");
+  if(code) downloadFile(code, "index.html", "text/html");
+  toast(code ? "exported project JSON + index.html" : "exported project JSON");
+}
+$("btnExport").addEventListener("click", projectExport);
 
 /* The Preview frame is driven by srcdoc alone. The old empty-state fallback
    pointed the iframe's src at "about:blank", leaving a second competing source
@@ -1364,6 +1545,7 @@ function setBusy(on){
   busy = on;
   ["runAll","run1","run2"].forEach(id => $(id).disabled = on);
   $("stop").hidden = !on;
+  syncToolbar();
 }
 $("stop").addEventListener("click", () => { if(controller) controller.abort(); });
 
