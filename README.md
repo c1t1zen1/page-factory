@@ -77,7 +77,7 @@ You can read and tweak the brief between the two steps, so if the AI assumed som
 2. Point it at an AI model. The easiest option if you don't have one yet: get a free or low-cost key from [OpenAI](https://platform.openai.com) or [OpenRouter](https://openrouter.ai), paste it in, pick "OpenAI-compatible."
 3. Type a few lines describing your website in plain language.
 4. Click **Run both stages** and watch it build.
-5. Preview it, then hit **Download** for the active brief/page, or **Export project** to download `page-factory-project.json` plus the generated `index.html` together. Project exports intentionally exclude API keys.
+5. Preview it, then hit **Download** for the active brief/page, or **Export project** to download `page-factory-project.json` plus the generated `index.html` together. Use the small **Import project** icon beside **01 · MODEL** to restore that JSON later, including its settings, prompts, design brief, and saved code. Project exports intentionally exclude API keys.
 
 Prefer to run it on your own computer instead of the hosted version? Download `index.html` from this repo and open it directly in any browser, or serve it locally:
 

@@ -135,7 +135,7 @@ button{ font:inherit; color:inherit; }
 /* ============================================================
    PANELS — drawing-sheet labels sitting in the rule
    ============================================================ */
-.panel{ border-bottom:1px solid var(--line); }
+.panel{ position:relative; border-bottom:1px solid var(--line); }
 .panel > summary, .panel-head{
   display:flex; align-items:center; gap:10px;
   padding:11px 16px;
@@ -151,6 +151,14 @@ button{ font:inherit; color:inherit; }
 .panel[open] > summary::before{ content:"–"; }
 .panel > summary:hover{ color:var(--paper); }
 .panel-body{ padding:4px 16px 20px; }
+.panel-import{
+  position:absolute; top:7px; left:120px; width:28px; height:28px; padding:0;
+  display:grid; place-items:center; background:transparent; border:1px solid transparent;
+  color:var(--mute); cursor:pointer;
+}
+.panel-import:hover:not(:disabled){ border-color:var(--line); color:var(--signal); }
+.panel-import:disabled{ opacity:.35; cursor:not-allowed; }
+.panel-import svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 
 /* ============================================================
    FORM
@@ -366,6 +374,10 @@ iframe.preview[hidden]{ display:none; }
 
   <details class="panel" open>
     <summary>01 · MODEL</summary>
+    <button class="panel-import" id="btnImport" type="button" title="Import project JSON" aria-label="Import Page Factory project JSON">
+      <svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 4h16"/><path d="M4 4v16a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V4"/></svg>
+    </button>
+    <input id="projectImport" type="file" accept="application/json,.json" hidden>
     <div class="panel-body">
       <label for="provider">API Provider</label>
       <select id="provider">
@@ -1114,6 +1126,7 @@ function syncToolbar(){
   $("btnTab").disabled = !hasCode;
   $("btnDl").disabled = !(hasCode || hasBrief);
   $("btnExport").disabled = busy;
+  $("btnImport").disabled = busy;
 }
 $("briefOut").addEventListener("input", syncToolbar);
 
@@ -1171,6 +1184,69 @@ function projectExport(){
   toast(code ? "exported project JSON + index.html" : "exported project JSON");
 }
 $("btnExport").addEventListener("click", projectExport);
+function updateProviderUi(provider){
+  const cfg = PROVIDERS[provider] || PROVIDERS.custom;
+  const hint = $("apiKeyHint");
+  if(hint) hint.textContent = cfg.keyHint;
+  $("apiKey").placeholder = cfg.keyPlaceholder;
+}
+function importProject(project){
+  if(!project || project.format !== "page-factory-project" || project.version !== 1){
+    throw new Error("Choose a Page Factory project JSON file exported by this app.");
+  }
+  if(!project.settings || typeof project.settings !== "object" || !project.outputs || typeof project.outputs !== "object"){
+    throw new Error("This project file is missing its saved settings or outputs.");
+  }
+
+  const settings = project.settings;
+  const provider = PROVIDERS[settings.provider] ? settings.provider : $("provider").value;
+  FIELDS.forEach(id => {
+    if(id !== "provider" && Object.prototype.hasOwnProperty.call(settings, id) && $(id)) $(id).value = String(settings[id] ?? "");
+  });
+  $("provider").value = provider;
+  updateProviderUi(provider);
+
+  const savedModel = typeof settings.model === "string" ? settings.model.trim() : "";
+  const savedCustomModel = typeof settings.customModel === "string" ? settings.customModel.trim() : "";
+  const usesCustomModel = !!savedCustomModel && savedModel === savedCustomModel;
+  populateModelsForProvider(provider, usesCustomModel ? "__custom__" : savedModel);
+  if(usesCustomModel){
+    $("model").value = "__custom__";
+    $("customModel").value = savedCustomModel;
+    $("customModelBox").style.display = "block";
+  }
+  syncSamplingControl();
+  setMode(settings.mode === "full" ? "full" : "quick");
+  $("refText").value = typeof settings.referenceText === "string" ? settings.referenceText : "";
+  $("refText").hidden = !$("refText").value;
+
+  $("briefOut").value = typeof project.outputs.designBrief === "string" ? project.outputs.designBrief : "";
+  pageCode = extractHtml(typeof project.outputs.webpageCode === "string" ? project.outputs.webpageCode : "");
+  $("codeOut").textContent = pageCode;
+  $("chars").textContent = pageCode ? pageCode.length : $("briefOut").value.length;
+  const style = $("briefOut").value.match(/(?:^|\n)\s*(?:STYLE|Selected style|CHOSEN STYLE)[^\n]*/i);
+  $("styleReadout").textContent = style ? "· " + style[0].trim().slice(0,60) : "";
+  if($("briefOut").value.trim()) show("brief");
+  else if(pageCode) show("code");
+  else show("empty");
+  renderPreview();
+  saveSettings();
+  syncToolbar();
+}
+$("btnImport").addEventListener("click", () => { if(!busy) $("projectImport").click(); });
+$("projectImport").addEventListener("change", async e => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    importProject(JSON.parse(await file.text()));
+    toast("project imported");
+    setStatus("project imported — ready to run", "");
+  }catch(err){
+    notice("<b>Could not import that project.</b> " + escapeHtml(err.message || "Choose a valid Page Factory project JSON file."));
+  }finally{
+    e.target.value = "";
+  }
+});
 
 /* The Preview frame is driven by srcdoc alone. The old empty-state fallback
    pointed the iframe's src at "about:blank", leaving a second competing source
