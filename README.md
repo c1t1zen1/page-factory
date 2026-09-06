@@ -2,142 +2,194 @@
 
 # 🏭 Page Factory
 
-### Type a few lines about your website. Get a complete webpage code block back — in seconds.
+### Describe a website idea. Generate a complete, editable webpage.
 
-No coding experience needed. No sign-up. No backend. Just your idea, in, and one finished, working webpage as a single self-contained `index.html` code block, out.
+**A beginner-friendly, bring-your-own-AI tool that turns a short description into a self-contained `index.html` webpage.**
 
-[![License: MIT](https://img.shields.io/github/license/c1t1zen1/page-factory?color=blue)](LICENSE)
-[![Top language](https://img.shields.io/github/languages/top/c1t1zen1/page-factory)](index.html)
-[![Stars](https://img.shields.io/github/stars/c1t1zen1/page-factory?color=yellow)](https://github.com/c1t1zen1/page-factory/stargazers)
-[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Fc1t1zen1.github.io%2Fpage-factory%2F&up_message=online&label=demo)](https://c1t1zen1.github.io/page-factory/)
-[![Build step](https://img.shields.io/badge/build%20step-none-success)](index.html)
-[![Dependencies](https://img.shields.io/badge/dependencies-zero-blue)](index.html)
-[![Single file](https://img.shields.io/badge/HTML-single--file-orange)](index.html)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](https://github.com/c1t1zen1/page-factory/pulls)
+[![Live demo](https://img.shields.io/website?url=https%3A%2F%2Fc1t1zen1.github.io%2Fpage-factory%2F&up_message=online&down_message=offline&label=live%20demo)](https://c1t1zen1.github.io/page-factory/)
+[![License](https://img.shields.io/github/license/c1t1zen1/page-factory?label=license)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/c1t1zen1/page-factory?label=last%20commit)](https://github.com/c1t1zen1/page-factory/commits/main)
+[![Repository size](https://img.shields.io/github/repo-size/c1t1zen1/page-factory?label=repo%20size)](https://github.com/c1t1zen1/page-factory)
+[![Stars](https://img.shields.io/github/stars/c1t1zen1/page-factory?style=flat&label=stars)](https://github.com/c1t1zen1/page-factory/stargazers)
+[![Forks](https://img.shields.io/github/forks/c1t1zen1/page-factory?style=flat&label=forks)](https://github.com/c1t1zen1/page-factory/forks)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/c1t1zen1/page-factory/pulls)
+[![No build step](https://img.shields.io/badge/build%20step-none-5CC8E8)](index.html)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-C7F03C)](index.html)
 
-### 👉 [**CREATE YOUR WEBSITE NOW →**](https://c1t1zen1.github.io/page-factory/) 👈
-
-*(it's free, it's instant, and it runs entirely in your browser)*
+### [Create a webpage →](https://c1t1zen1.github.io/page-factory/)
 
 </div>
 
 ---
 
-## What is this, actually?
-
-Page Factory is one HTML file that turns a short description — "webpage for my dog-walking business" — into a complete, good-looking, ready-to-publish webpage. You don't write any code. You don't install anything. You just describe what you want, click a button, and watch it build one complete, self-contained `index.html` webpage in a single code block.
-
-It's aimed squarely at people who've **never touched HTML** and don't want to. If you can type a sentence, you can make a website.
-
-Under the hood it talks to an AI model to do the actual writing and designing — but you bring your own model (that's the "bring your own key" part), so there's no subscription, no account, and nothing running on anyone's server but your own browser.
-
 <p align="center">
-  <img src="screenshots/app-main-layout.png" alt="Page Factory main interface — describe your webpage on the left, then inspect its complete HTML code and preview on the right" width="90%">
+  <img src="screenshots/Page-Factory.png" alt="The Page Factory interface with AI provider settings on the left and instructions for creating a complete webpage on the right." width="100%">
 </p>
 
-## Why people like it
+## What is Page Factory?
 
-- **Simple.** One text box. Describe your business or idea in plain English. That's the whole learning curve.
-- **Fast.** Two short AI steps and you have a finished webpage — usually well under a minute once it's running.
-- **Fun.** Watching a real design brief and a real webpage write themselves in front of you, live, never gets old.
-- **Yours.** The output is one complete HTML code block: a normal, self-contained `index.html` webpage. Copy it, download it, host it anywhere, edit it in Notepad, hand it to a developer — it's not locked into anything. The **Export project** toolbar button also saves the full project JSON (settings, prompts, design brief, and code) alongside the generated `index.html`.
-- **Honest about gaps.** If you leave something out, the AI invents something reasonable and clearly marks it `[ASSUMED]` so you know exactly what to double-check or change.
+Page Factory helps you create a **webpage** without starting from a blank document or writing code first. Tell it what you want—for example, “a friendly webpage for my dog-walking business with an appointment button”—and an AI model creates a design brief, then turns that brief into a complete webpage.
 
-## See it in action
+The result is a normal `index.html` file containing the HTML, CSS, and JavaScript needed for the generated webpage. You can preview it, download it, open it in a browser, publish it with a web host, or give it to a developer to continue editing.
 
-Every generated webpage is different — the tool deliberately avoids the "every AI website looks the same" trap by picking a genuinely different visual style each time, based on what you're describing. Here are two examples generated from two very different one-line briefs:
+This repository is deliberately simple:
+
+- **One static HTML application.** No install, build process, server, or database is required to run Page Factory itself.
+- **Bring your own AI.** You choose the AI provider or local model and connect it with your own API key when one is required.
+- **Your connection goes directly to your chosen endpoint.** Page Factory does not send your prompt through its own backend because it does not have one.
+- **You stay in control.** The design brief, prompts, and generated webpage code are all visible and editable.
+
+> **New to coding?** An API is simply a way for this webpage to ask an AI service to do work. An API key is a private password for that service. Never share your API key or commit it to a public repository.
+
+## What can it do?
+
+| Feature | What it means for you |
+| --- | --- |
+| **Two-stage generation** | First, the AI creates a clear design brief. Second, it builds the complete webpage from that brief. |
+| **Editable design brief** | Review and change the AI’s plan before generating the final webpage. Missing details are marked as `[ASSUMED]` so you can correct them. |
+| **Quick or detailed input** | Start with a few plain-language sentences, or use the full brief fields to specify audience, goals, tone, constraints, and more. |
+| **Reference website input** | Paste a public website URL and use **Pull** to bring its readable text into your brief as reference material. |
+| **Style selection** | Let the AI choose a visual direction or select a style to guide the generated webpage. |
+| **Custom prompts** | View, edit, simplify, reset, or ask the selected AI to rewrite either generation prompt. |
+| **Live output controls** | Run both stages together, run either stage separately, or stop an in-progress request. |
+| **Preview and export** | Copy the generated webpage code, preview it inside the app, open it in a new tab, or download it as `index.html`. |
+| **Project save and restore** | Export a project JSON file with your settings, prompts, design brief, and generated webpage code; import it later to continue. API keys are excluded from project exports. |
+| **Local or cloud AI support** | Connect to llama.cpp, Ollama, LM Studio, OpenAI, Anthropic, OpenRouter, or another OpenAI-compatible API. |
+
+## See a generated webpage
+
+Page Factory can use the same idea to create very different visual directions. These two screenshots are from a generated AI-video-studio webpage: the first shows its hero section and the second shows a reel section farther down the same webpage.
 
 <table>
-<tr>
-<td width="50%" align="center">
-<img src="screenshots/example-reelcraft.png" alt="Example output: a bold, high-contrast landing page for an AI video studio" width="100%"><br>
-<sub><b>Input:</b> "Landing page for my AI video work — directors and ad agencies looking for someone who can deliver."</sub>
-</td>
-<td width="50%" align="center">
-<img src="screenshots/example-marrow-and-salt.png" alt="Example output: an elegant, editorial-style landing page for a private chef" width="100%"><br>
-<sub><b>Input:</b> "Landing page for a private chef in LA, upscale, books through referrals only."</sub>
-</td>
-</tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="screenshots/Screenshot1.png" alt="Generated webpage hero section for an AI video production studio." width="100%"><br>
+      <sub>Generated webpage: hero section</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="screenshots/Screenshot2.png" alt="Generated webpage reel section for an AI video production studio." width="100%"><br>
+      <sub>Generated webpage: reel section</sub>
+    </td>
+  </tr>
 </table>
-
-Same tool, same two-step process, two completely different websites — because two completely different businesses shouldn't look the same.
 
 ## How it works
 
-Making your complete webpage happens in two quick steps:
+Page Factory uses two AI steps so you can catch mistakes before code is created:
 
-1. **Stage 1 — The Brief.** You type a few lines about your website. The AI turns that into a real design plan: colors, fonts, layout, the actual words on the webpage, even a custom interactive touch — all before a single line of code is written.
-2. **Stage 2 — The Build.** The AI takes that plan and writes one complete, self-contained `index.html` webpage in a single HTML code block — ready to copy, open, preview, download, or publish immediately.
+1. **Stage 1 — Design brief:** You describe the webpage. The AI turns your notes into a plan for the audience, content, layout, colors, typography, calls to action, and interactive details.
+2. **Review:** Read and edit the design brief. If the AI guessed the wrong city, audience, service, or tone, change it here.
+3. **Stage 2 — Webpage builder:** The AI uses the approved design brief to write a complete, self-contained `index.html` webpage.
+4. **Use your webpage:** Preview it, copy the code, open it in a new tab, download `index.html`, or export the whole Page Factory project for later.
 
-You can read and tweak the brief between the two steps, so if the AI assumed something wrong (say, the wrong city or the wrong tone), you fix it *before* it gets built — not after.
+## Quick start: create your first webpage
 
-## Get started in 60 seconds
+### Option A: use the live version
 
-1. Open **[the live tool](https://c1t1zen1.github.io/page-factory/)** — nothing to download.
-2. Point it at an AI model. The easiest option if you don't have one yet: get a free or low-cost key from [OpenAI](https://platform.openai.com) or [OpenRouter](https://openrouter.ai), paste it in, pick "OpenAI-compatible."
-3. Type a few lines describing your website in plain language.
-4. Click **Run both stages** and watch it build.
-5. Preview it, then hit **Download** for the active brief/page, or **Export project** to download `page-factory-project.json` plus the generated `index.html` together. Use the small **Import project** icon beside **01 · MODEL** to restore that JSON later, including its settings, prompts, design brief, and saved code. Project exports intentionally exclude API keys.
+1. Open the **[live Page Factory webpage](https://c1t1zen1.github.io/page-factory/)**.
+2. In **01 · MODEL**, choose your AI provider.
+3. Enter your API key if that provider requires one. For a local model, leave the key blank unless your local setup requires it.
+4. Click **Fetch** beside **Model**, then choose a model. If your provider does not list models, choose **Custom / Enter manually** and type the model name.
+5. In **02 · BRIEF**, describe the webpage you want. Example:
 
-Prefer to run it on your own computer instead of the hosted version? Download `index.html` from this repo and open it directly in any browser, or serve it locally:
+   ```text
+   Create a welcoming webpage for my dog-walking business in Austin.
+   My customers are busy pet owners. Explain my services, show pricing,
+   add testimonials, and include a button to request a walk.
+   ```
 
-```bash
-python3 -m http.server 4000
-# then open http://localhost:4000
-```
+6. Click **Run both stages**.
+7. Review the **DESIGN BRIEF**, then select **WEBPAGE CODE** or **PREVIEW** to inspect your finished webpage.
+8. Click the download icon to save the generated webpage as `index.html`.
 
-## Endpoints it works with
+### Option B: run the tool from this repository
 
-The **API Provider** dropdown has one entry per runtime. Pick yours and the base URL fills itself in:
+1. Download this repository or clone it with Git:
 
-| Provider option | Base URL it sets | Key needed? |
-|---|---|---|
-| `llama.cpp (llama-server)` | `http://localhost:8080/v1` | No |
-| `Ollama` | `http://localhost:11434/v1` | No |
-| `LM Studio` | `http://localhost:1234/v1` | No |
-| `OpenAI` | `https://api.openai.com/v1` | Yes |
-| `Anthropic` | `https://api.anthropic.com/v1` | Yes |
-| `OpenRouter` | `https://openrouter.ai/api/v1` | Yes |
-<!-- NVIDIA NIM is intentionally disabled in the GitHub Pages build. Uncomment
-this row and the marked blocks in index.html when deploying with a same-origin/
-server-side proxy. -->
-<!-- | `NVIDIA NIM` | `https://integrate.api.nvidia.com/v1` | Yes — use through a same-origin/server-side proxy from the hosted app | -->
-| `Custom (OpenAI-compatible)` | whatever you type — vLLM, Groq, Mistral, DeepSeek and friends live here | Only if the server asks |
+   ```bash
+   git clone https://github.com/c1t1zen1/page-factory.git
+   cd page-factory
+   ```
 
-Hit **Fetch** and the Model dropdown rebuilds itself from what that endpoint actually serves — the old list is cleared first, every time, so nothing from the previous provider is left behind. Switching provider does the same refresh on its own, and **Custom / Enter manually…** at the bottom of the list covers any model the endpoint doesn't advertise.
+2. Open `index.html` in your browser. You can also serve the folder locally, which is helpful when connecting to a local AI server:
 
-## Two snags newcomers hit (and the fix)
+   ```bash
+   python -m http.server 4000
+   ```
 
-**"It won't connect to my local model."** This is almost always one of two things:
+3. Visit `http://localhost:4000` in your browser and follow the same steps above.
 
-- **Mixed content** — a page loaded over `https://` (like this hosted one) can't call `http://localhost`. Either run the tool locally over plain `http://` too (see the command above), or put a proper HTTPS certificate in front of your local server.
-- **CORS** — start `llama-server` with `--host 0.0.0.0`, and for Ollama set `OLLAMA_ORIGINS=*`. Both send the right permissions by default otherwise they don't.
+There are no packages to install and no `npm install` command for this project.
 
-The app tells you which one you hit right when it happens, so you're never guessing.
+## Connect your own AI API
 
-## A few tips for best results
+Choose a provider in **01 · MODEL**. Page Factory fills in a suggested base URL; you can change it if your provider gives you a different endpoint.
 
-- Set **max tokens** to at least 16000 — a full page is long, and a cut-off build is the most common hiccup. The status bar flags it for you.
-- Temperature around `0.9` works well for the creative brief step; lower it if you want the build step to be more literal. **Reasoning effort** replaces Temperature directly below the Model picker for native Claude models and for OpenRouter models whose model metadata advertises its unified `reasoning` parameter. Other OpenAI-compatible endpoints use Temperature because they do not share one documented reasoning-effort control across all hosted models.
-- Your API key only ever gets stored in *your own browser* if you tick "Remember key," and it's only ever sent to the endpoint you chose. Nothing passes through any third-party server.
-<!-- NVIDIA NIM is intentionally disabled in the GitHub Pages build. Uncomment
-this note when re-enabling the provider for a deployment with a same-origin/
-server-side proxy. -->
-<!-- - **NVIDIA NIM requires a proxy in the hosted GitHub Pages app.** NVIDIA's cloud endpoint does not permit requests from this page's browser origin, so point the **Custom** provider at a same-origin/server-side proxy that forwards requests to NVIDIA NIM. This is a browser CORS restriction, not an API-key or model-setting issue. -->
-- The actual prompts that drive the AI live right in the **PROMPTS** panel in the app — feel free to read them, learn from them, or rewrite them entirely. That's the real product; the interface is just the runner.
+| Provider in Page Factory | Suggested base URL | Do you need an API key? | Best for |
+| --- | --- | --- | --- |
+| **llama.cpp (llama-server)** | `http://localhost:8080/v1` | Usually no | A model running on your own computer with llama.cpp. |
+| **Ollama** | `http://localhost:11434/v1` | Usually no | A model running locally through Ollama. |
+| **LM Studio** | `http://localhost:1234/v1` | Usually no | A local model served by LM Studio. |
+| **OpenAI** | `https://api.openai.com/v1` | Yes | OpenAI models using your OpenAI API key. |
+| **Anthropic** | `https://api.anthropic.com/v1` | Yes | Claude models using your Anthropic API key. |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | Yes | A choice of models available through OpenRouter. |
+| **Custom (OpenAI-compatible)** | Set your own URL | Depends on the service | Compatible services such as vLLM, Groq, Mistral, or DeepSeek. |
 
----
+### Cloud API setup
 
-<div align="center">
+For OpenAI, Anthropic, OpenRouter, or another cloud provider:
 
-### Got an idea for a website? Stop staring at a blank page.
+1. Create an account with that provider.
+2. Create an API key in the provider’s dashboard.
+3. In Page Factory, select the provider and paste the key into **API key**.
+4. Click **Fetch** to load available models, then choose one.
+5. Set **Max tokens** high enough for a full webpage. The default `16000` is a practical starting point.
+6. Run Stage 1 and Stage 2.
 
-## 🚀 [**CREATE YOUR WEBSITE NOW →**](https://c1t1zen1.github.io/page-factory/)
+Cloud providers may charge for API usage. Check the provider’s pricing and usage limits before generating large or repeated webpages.
 
-</div>
+### Local AI setup
 
----
+For llama.cpp, Ollama, or LM Studio:
+
+1. Start your local AI server and make sure it exposes an OpenAI-compatible `/v1` API.
+2. Select the matching provider in Page Factory.
+3. Confirm the **Base URL** matches your local server.
+4. Click **Fetch**, choose your local model, and generate your webpage.
+
+If the hosted Page Factory webpage cannot reach `http://localhost`, run Page Factory locally with the Python command above. Browsers block many requests from an HTTPS webpage to a local HTTP server; this is called **mixed content**. Your server may also need to allow the browser with **CORS** settings. The app displays guidance when a connection fails.
+
+## Important privacy and security notes
+
+- Page Factory sends prompts and generated output directly between your browser and the endpoint you choose.
+- It has no Page Factory backend, database, account system, or subscription service.
+- Your API key is saved in browser storage **only** if you enable **Remember key in this browser**.
+- Project exports intentionally do **not** contain API keys or the remember-key preference.
+- Treat an API key like a password. Do not paste it into a generated webpage, screenshot, issue, commit, or public chat.
+
+## Tips for better generated webpages
+
+- **Give useful details.** Mention who the webpage is for, what visitors should do, what content is essential, and the mood you want.
+- **Use the design brief as a checkpoint.** Correct assumptions before Stage 2 instead of asking the AI to repair finished code later.
+- **Keep the webpage focused.** One clear goal—booking, subscribing, requesting a quote, joining a waitlist—usually produces a stronger result.
+- **Use style thoughtfully.** Letting the model choose works well; selecting a style is useful when you already know the visual direction you want.
+- **Adjust generation controls when needed.** Lower temperature for more literal output. Use reasoning effort only when the selected model supports it.
+- **Save your work.** Download `index.html` for the finished webpage and use **Export project** when you want to preserve your settings, prompts, brief, and output together.
+
+## Publish your generated webpage
+
+After downloading `index.html`, you have a standard static webpage file. You can:
+
+1. Double-click it to open it locally in a browser.
+2. Upload it to a static host such as GitHub Pages, Netlify, Cloudflare Pages, or your web hosting account.
+3. Give the file to a developer to customize, connect forms, add analytics, or integrate a backend.
+
+Generated webpages may need human review before publishing—especially for facts, pricing, contact details, accessibility, legal language, form handling, and anything that makes claims about a business or service.
+
+## Contributing
+
+Ideas, documentation improvements, bug reports, and pull requests are welcome. Please open an issue or pull request with a clear explanation of the change.
 
 ## License
 
-MIT — do what you like with it. See [LICENSE](LICENSE).
+This project is available under the [MIT License](LICENSE).
